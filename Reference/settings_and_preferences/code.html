@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Indriya - Settings &amp; Preferences</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#f4c32f",
+                        "background-light": "#f8f8f5",
+                        "background-dark": "#221e10",
+                        "surface-dark": "#2d2715",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        .ios-switch:checked + div {
+            background-color: #f4c32f;
+        }
+        .ios-switch:checked + div > div {
+            transform: translateX(20px);
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-stone-200 antialiased selection:bg-primary/30">
+<div class="relative flex h-auto min-h-screen w-full max-w-[430px] mx-auto flex-col bg-background-light dark:bg-background-dark shadow-2xl overflow-x-hidden border-x border-primary/10">
+<!-- Top Navigation Bar -->
+<nav class="sticky top-0 z-50 flex items-center bg-background-light/95 dark:bg-background-dark/95 backdrop-blur-md px-4 py-4 border-b border-primary/20">
+<button class="text-primary hover:bg-primary/10 p-2 rounded-full transition-colors">
+<span class="material-symbols-outlined text-2xl">arrow_back_ios</span>
+</button>
+<h1 class="flex-1 text-center text-lg font-semibold tracking-tight pr-10">Settings</h1>
+</nav>
+<main class="flex flex-col flex-1 pb-12">
+<!-- App Logo/Branding Header -->
+<div class="flex flex-col items-center justify-center py-8">
+<div class="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center border border-primary/30 mb-4">
+<span class="material-symbols-outlined text-primary text-4xl">self_improvement</span>
+</div>
+<h2 class="text-xs uppercase tracking-[0.4em] font-medium text-primary/70">Indriya</h2>
+</div>
+<!-- PREFERENCES SECTION -->
+<section class="mt-4">
+<h3 class="px-6 pb-2 text-[11px] font-bold tracking-[0.15em] text-primary uppercase">Preferences</h3>
+<div class="bg-white/5 dark:bg-surface-dark/50 border-y border-primary/20">
+<!-- Daily Reminders -->
+<div class="flex items-center gap-4 px-6 min-h-[60px] justify-between group">
+<div class="flex items-center gap-4">
+<div class="text-primary/80 flex items-center justify-center rounded-lg bg-primary/10 shrink-0 size-9 transition-colors group-hover:bg-primary/20">
+<span class="material-symbols-outlined text-xl">notifications</span>
+</div>
+<span class="text-[15px] font-medium leading-normal">Daily Reminders</span>
+</div>
+<div class="shrink-0">
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer ios-switch" type="checkbox"/>
+<div class="w-11 h-6 bg-stone-700 rounded-full peer-checked:bg-primary transition-colors after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
+</label>
+</div>
+</div>
+<div class="h-px bg-primary/10 ml-16 mr-6"></div>
+<!-- Silent Mode -->
+<div class="flex items-center gap-4 px-6 min-h-[60px] justify-between group">
+<div class="flex items-center gap-4">
+<div class="text-primary/80 flex items-center justify-center rounded-lg bg-primary/10 shrink-0 size-9 transition-colors group-hover:bg-primary/20">
+<span class="material-symbols-outlined text-xl">volume_off</span>
+</div>
+<span class="text-[15px] font-medium leading-normal">Silent Mode</span>
+</div>
+<div class="shrink-0">
+<label class="relative inline-flex items-center cursor-pointer">
+<input class="sr-only peer ios-switch" type="checkbox"/>
+<div class="w-11 h-6 bg-stone-700 rounded-full peer-checked:bg-primary transition-colors after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
+</label>
+</div>
+</div>
+</div>
+</section>
+<!-- PRIVACY SECTION -->
+<section class="mt-8">
+<h3 class="px-6 pb-2 text-[11px] font-bold tracking-[0.15em] text-primary uppercase">Privacy</h3>
+<div class="bg-white/5 dark:bg-surface-dark/50 border-y border-primary/20 px-6 py-5">
+<div class="flex flex-col gap-2">
+<p class="text-[14px] text-stone-300 leading-relaxed font-light italic">
+                            "No ads. No tracking. Minimal data storage."
+                        </p>
+<p class="text-[13px] text-stone-500 leading-relaxed">
+                            Your practice is sacred. We believe sensory mastery requires digital peace. Your data never leaves this device unless synced.
+                        </p>
+</div>
+<button class="mt-4 text-primary text-[14px] font-medium flex items-center gap-1 hover:underline">
+                        Privacy Policy <span class="material-symbols-outlined text-sm">open_in_new</span>
+</button>
+</div>
+</section>
+<!-- ACCOUNT SECTION -->
+<section class="mt-8">
+<h3 class="px-6 pb-2 text-[11px] font-bold tracking-[0.15em] text-primary uppercase">Account</h3>
+<div class="bg-white/5 dark:bg-surface-dark/50 border-y border-primary/20">
+<div class="flex items-center gap-4 px-6 min-h-[60px] justify-between">
+<div class="flex flex-col">
+<span class="text-[13px] text-stone-500">Method</span>
+<span class="text-[15px] font-medium">Logged in via Apple</span>
+</div>
+<span class="material-symbols-outlined text-stone-600">ios</span>
+</div>
+<div class="h-px bg-primary/10 mx-6"></div>
+<button class="w-full flex items-center gap-4 px-6 min-h-[60px] text-red-400 hover:bg-red-400/5 transition-colors group">
+<div class="flex items-center justify-center rounded-lg bg-red-400/10 shrink-0 size-9 group-hover:bg-red-400/20">
+<span class="material-symbols-outlined text-xl">logout</span>
+</div>
+<span class="text-[15px] font-medium">Sign Out</span>
+</button>
+</div>
+</section>
+<!-- Footer Info -->
+<footer class="mt-12 px-6 text-center">
+<p class="text-[11px] font-medium tracking-widest text-stone-600 uppercase">Indriya Version 1.2.0 (Stable)</p>
+<div class="mt-4 opacity-30 grayscale inline-block">
+<div class="border-[0.5px] border-primary p-1 rounded-sm">
+<div class="bg-primary/20 px-3 py-1 text-[10px] text-primary font-bold">CERTIFIED MINIMALIST</div>
+</div>
+</div>
+</footer>
+</main>
+<!-- iOS Bottom Indicator -->
+<div class="fixed bottom-1 left-1/2 -translate-x-1/2 w-32 h-1.5 bg-white/10 rounded-full"></div>
+</div>
+</body></html>

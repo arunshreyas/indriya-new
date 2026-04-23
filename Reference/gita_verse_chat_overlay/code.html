@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Indriya - Gita Verse Chat</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#f4c32f",
+                        "background-light": "#f8f8f5",
+                        "background-dark": "#1a1812", // Slightly adjusted for depth
+                        "sheet-dark": "#231e10",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "2xl": "1.5rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            font-family: 'Inter', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .glass-overlay {
+            backdrop-filter: blur(8px);
+            background-color: rgba(26, 24, 18, 0.4);
+        }
+        .sanskrit-text {
+            line-height: 1.6;
+            letter-spacing: 0.05em;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark text-white overflow-hidden">
+<!-- Main Container (iOS Phone Form Factor Simulation) -->
+<div class="relative flex h-screen w-full flex-col bg-background-light dark:bg-background-dark overflow-hidden">
+<!-- Top App Bar -->
+<div class="flex items-center bg-background-light dark:bg-background-dark p-4 pb-2 justify-between z-10">
+<div class="text-neutral-800 dark:text-white flex size-12 shrink-0 items-center justify-start">
+<span class="material-symbols-outlined cursor-pointer">arrow_back_ios</span>
+</div>
+<div class="flex flex-col items-center">
+<h2 class="text-neutral-900 dark:text-white text-sm font-semibold leading-tight tracking-wide uppercase opacity-60">Chapter 2</h2>
+<h2 class="text-neutral-900 dark:text-white text-lg font-bold leading-tight">Verse 47</h2>
+</div>
+<div class="flex w-12 items-center justify-end">
+<button class="flex items-center justify-center rounded-lg h-12 bg-transparent text-neutral-800 dark:text-white">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</div>
+</div>
+<!-- Verse Content (Visible in top 2/3) -->
+<div class="flex flex-col items-center px-8 pt-12 text-center transition-all duration-300">
+<h2 class="text-primary tracking-wide text-2xl font-bold leading-relaxed sanskrit-text mb-6">
+                कर्मण्येवाधिकारस्ते मा फलेषु कदाचन ।<br/>
+                मा कर्मफलहेतुर्भूर्मा ते सङ्गोऽस्त्वकर्मणि ॥
+            </h2>
+<p class="text-neutral-700 dark:text-neutral-300 text-lg font-medium leading-relaxed italic mb-4">
+                karmaṇy-evādhikāras te mā phaleṣu kadācana<br/>
+                mā karma-phala-hetur bhūr mā te saṅgo ’stv akarmaṇi
+            </p>
+<div class="w-12 h-px bg-primary/30 my-6"></div>
+<p class="text-neutral-900 dark:text-white text-lg font-normal leading-relaxed max-w-md">
+                "You have a right to perform your prescribed duties, but you are not entitled to the fruits of your actions."
+            </p>
+</div>
+<!-- Chat Overlay Layer (Backdrop blur for focus) -->
+<div class="absolute inset-0 glass-overlay z-20"></div>
+<!-- Mini-Chat Bottom Sheet (iOS Style) -->
+<div class="absolute bottom-0 left-0 right-0 z-30 bg-[#12110b] rounded-t-2xl shadow-2xl border-t border-white/5 flex flex-col max-h-[45vh]">
+<!-- Handle & Close -->
+<div class="relative flex flex-col items-center pt-3 pb-2">
+<div class="h-1.5 w-12 rounded-full bg-white/10 mb-2"></div>
+<div class="absolute right-4 top-4">
+<button class="p-1 rounded-full bg-white/5 text-white/60 hover:text-white">
+<span class="material-symbols-outlined text-[20px]">close</span>
+</button>
+</div>
+<h3 class="text-white/40 text-xs font-bold uppercase tracking-widest pt-1">Indriya AI</h3>
+</div>
+<!-- Chat Content Area -->
+<div class="flex-1 overflow-y-auto px-6 py-4 space-y-6">
+<!-- AI Initial Message or Context -->
+<div class="flex items-start gap-3">
+<div class="size-8 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
+<span class="material-symbols-outlined text-primary text-sm">auto_awesome</span>
+</div>
+<div class="bg-white/5 rounded-2xl rounded-tl-none p-4 text-sm text-neutral-300 leading-relaxed max-w-[85%]">
+                        I can help you understand the nuances of Nishkama Karma in this verse. What would you like to explore?
+                    </div>
+</div>
+<!-- Suggested Prompt Chip -->
+<div class="flex flex-col items-end space-y-2">
+<div class="bg-primary/10 border border-primary/30 rounded-2xl p-4 text-sm text-primary leading-relaxed max-w-[85%] cursor-pointer hover:bg-primary/20 transition-colors">
+                        "What is the meaning of non-attachment in this verse?"
+                    </div>
+<span class="text-[10px] text-white/20 mr-2 uppercase">Suggested question</span>
+</div>
+</div>
+<!-- Input Area -->
+<div class="p-4 pb-8 bg-[#0d0c08] border-t border-white/5">
+<div class="relative flex items-center">
+<input class="w-full bg-white/5 border-none rounded-xl py-4 pl-5 pr-14 text-white placeholder-white/30 focus:ring-1 focus:ring-primary/50 text-sm" placeholder="Ask Indriya about this verse..." type="text"/>
+<button class="absolute right-2 top-1/2 -translate-y-1/2 size-10 bg-primary text-background-dark rounded-lg flex items-center justify-center hover:scale-95 transition-transform">
+<span class="material-symbols-outlined font-bold">arrow_upward</span>
+</button>
+</div>
+<div class="flex justify-center mt-3">
+<p class="text-[10px] text-white/20">Guiding you through sensory mastery &amp; Vedic wisdom</p>
+</div>
+</div>
+</div>
+</div>
+</body></html>
