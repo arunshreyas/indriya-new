@@ -23,19 +23,6 @@ export default function TabLayout() {
         },
       }}>
       <Tabs.Screen
-        name="index"
-        options={{
-          title: 'Home',
-          tabBarIcon: ({ color, focused }) => (
-            <MaterialIcons 
-              name="home" 
-              size={24} 
-              color={focused ? Colors.primary : Colors.textMuted}
-            />
-          ),
-        }}
-      />
-      <Tabs.Screen
         name="practice"
         options={{
           title: 'Practice',
@@ -62,12 +49,25 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="profile"
+        name="dharma"
         options={{
-          title: 'Profile',
+          title: 'Dharma',
           tabBarIcon: ({ color, focused }) => (
             <MaterialIcons 
-              name="person" 
+              name="lightbulb" 
+              size={24} 
+              color={focused ? Colors.primary : Colors.textMuted}
+            />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="reflection"
+        options={{
+          title: 'Reflection',
+          tabBarIcon: ({ color, focused }) => (
+            <MaterialIcons 
+              name="edit-note" 
               size={24} 
               color={focused ? Colors.primary : Colors.textMuted}
             />
