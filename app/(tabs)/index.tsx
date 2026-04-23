@@ -21,7 +21,7 @@ const todayRituals: Ritual[] = [
     title: 'Morning Ritual',
     description: 'Sensory Withdrawal (Pratyahara)',
     status: 'not-started',
-    icons: ['air', 'self-care'],
+    icons: ['air', 'spa'],
   },
   {
     id: 'evening-reflection',
