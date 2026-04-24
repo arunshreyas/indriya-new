@@ -1,19 +1,9 @@
-import { registerForPushNotificationsAsync, scheduleDailyNotifications } from '@/utils/notifications';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React from 'react';
 import { View } from 'react-native';
 
 export default function RootLayout() {
-  React.useEffect(() => {
-    // Initialize notifications on app start
-    async function initNotifications() {
-      await registerForPushNotificationsAsync();
-      await scheduleDailyNotifications();
-    }
-    initNotifications();
-  }, []);
-
   return (
     <View style={{ flex: 1 }}>
       <Stack initialRouteName="(tabs)">

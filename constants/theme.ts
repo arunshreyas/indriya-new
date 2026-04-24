@@ -96,11 +96,11 @@ export const Spacing = {
 };
 
 export const BorderRadius = {
-  sm: '4px',
-  md: '8px',
-  lg: '12px',
-  xl: '16px',
-  full: '9999px',
+  sm: 4,
+  md: 8,
+  lg: 12,
+  xl: 16,
+  full: 9999,
 };
 
 export const Shadow = {
