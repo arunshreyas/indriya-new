@@ -5,161 +5,230 @@ import {
   StyleSheet,
   TextInput,
   TouchableOpacity,
-  ScrollView,
   KeyboardAvoidingView,
   Platform,
+  FlatList,
+  Alert,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { Colors, Typography, BorderRadius, Shadow } from '@/constants/theme';
-
-interface GuidanceResponse {
-  keyword: string;
-  guidance: string;
-  quote: string;
-}
-
-const guidanceDatabase: Record<string, GuidanceResponse> = {
-  anxious: {
-    keyword: 'anxious',
-    guidance: 'Focus on your action, not the result. The fruit of work is not your concern.',
-    quote: 'You have the right to perform your prescribed duty, but you are not entitled to the fruits of action.',
-  },
-  anxiety: {
-    keyword: 'anxiety',
-    guidance: 'Focus on your action, not the result. The fruit of work is not your concern.',
-    quote: 'You have the right to perform your prescribed duty, but you are not entitled to the fruits of action.',
-  },
-  worried: {
-    keyword: 'worried',
-    guidance: 'Focus on your action, not the result. The fruit of work is not your concern.',
-    quote: 'You have the right to perform your prescribed duty, but you are not entitled to the fruits of action.',
-  },
-  lazy: {
-    keyword: 'lazy',
-    guidance: 'Act without waiting for motivation. Discipline creates its own momentum.',
-    quote: 'Perform your duty equipoised, abandoning all attachment to success or failure.',
-  },
-  unmotivated: {
-    keyword: 'unmotivated',
-    guidance: 'Act without waiting for motivation. Discipline creates its own momentum.',
-    quote: 'Perform your duty equipoised, abandoning all attachment to success or failure.',
-  },
-  angry: {
-    keyword: 'angry',
-    guidance: 'Anger comes from unfulfilled desire. Observe it, do not fuel it.',
-    quote: 'From anger, complete delusion arises, and from delusion bewilderment of memory.',
-  },
-  anger: {
-    keyword: 'anger',
-    guidance: 'Anger comes from unfulfilled desire. Observe it, do not fuel it.',
-    quote: 'From anger, complete delusion arises, and from delusion bewilderment of memory.',
-  },
-  sad: {
-    keyword: 'sad',
-    guidance: 'This too shall pass. The soul is neither born nor does it die.',
-    quote: 'The soul is unborn, eternal, ever-existing, undying, and primeval.',
-  },
-  depressed: {
-    keyword: 'depressed',
-    guidance: 'This too shall pass. The soul is neither born nor does it die.',
-    quote: 'The soul is unborn, eternal, ever-existing, undying, and primeval.',
-  },
-  confused: {
-    keyword: 'confused',
-    guidance: 'In stillness, clarity emerges. Withdraw your senses from their objects.',
-    quote: 'When the mind, restrained from material activities, becomes still, then one finds peace.',
-  },
-  lost: {
-    keyword: 'lost',
-    guidance: 'In stillness, clarity emerges. Withdraw your senses from their objects.',
-    quote: 'When the mind, restrained from material activities, becomes still, then one finds peace.',
-  },
-  tired: {
-    keyword: 'tired',
-    guidance: 'Rest is also action. Take refuge in the silence between efforts.',
-    quote: 'The yogi who is satisfied with the self, whose mind is fixed in the self, finds peace.',
-  },
-  exhausted: {
-    keyword: 'exhausted',
-    guidance: 'Rest is also action. Take refuge in the silence between efforts.',
-    quote: 'The yogi who is satisfied with the self, whose mind is fixed in the self, finds peace.',
-  },
-  stressed: {
-    keyword: 'stressed',
-    guidance: 'You are not your thoughts. Witness them without becoming them.',
-    quote: 'One who is not disturbed by the incessant flow of desires can alone achieve peace.',
-  },
-  fear: {
-    keyword: 'fear',
-    guidance: 'Fear is born of separation. Remember: the Self is eternal and unchanging.',
-    quote: 'The soul can never be cut to pieces by any weapon, nor burned by fire, nor moistened by water.',
-  },
-  afraid: {
-    keyword: 'afraid',
-    guidance: 'Fear is born of separation. Remember: the Self is eternal and unchanging.',
-    quote: 'The soul can never be cut to pieces by any weapon, nor burned by fire, nor moistened by water.',
-  },
-  jealous: {
-    keyword: 'jealous',
-    guidance: 'Another\'s success takes nothing from you. Focus on your own path.',
-    quote: 'A person who is not disturbed by the incessant flow of desires can alone achieve peace.',
-  },
-  envy: {
-    keyword: 'envy',
-    guidance: 'Another\'s success takes nothing from you. Focus on your own path.',
-    quote: 'A person who is not disturbed by the incessant flow of desires can alone achieve peace.',
-  },
-  lonely: {
-    keyword: 'lonely',
-    guidance: 'You are never truly alone. The Self within connects all beings.',
-    quote: 'The wise see the same Self in all beings, whether it be a Brahmin, a cow, an elephant, or a dog.',
-  },
-  distracted: {
-    keyword: 'distracted',
-    guidance: 'Bring the mind back, again and again. That is the practice.',
-    quote: 'From wherever the mind wanders due to its flickering and unsteady nature, one must withdraw it and bring it back under control.',
-  },
-  bored: {
-    keyword: 'bored',
-    guidance: 'Boredom is resistance to what is. Find the extraordinary in the ordinary.',
-    quote: 'The person whose mind is always free from attachment, who has subdued the mind and senses, attains peace.',
-  },
-};
-
-const defaultGuidance: GuidanceResponse = {
-  keyword: 'general',
-  guidance: 'Be present. Act with awareness. That is the path.',
-  quote: 'Yoga is the journey of the self, through the self, to the self.',
-};
+import { openRouterService, Message, Conversation } from '@/services/openRouter';
+import { ConversationStorage } from '@/utils/conversationStorage';
 
 export default function DharmaScreen() {
   const insets = useSafeAreaInsets();
   const [input, setInput] = React.useState('');
-  const [response, setResponse] = React.useState<GuidanceResponse | null>(null);
-  const [showInput, setShowInput] = React.useState(true);
+  const [currentConversation, setCurrentConversation] = React.useState<Conversation | null>(null);
+  const [conversations, setConversations] = React.useState<Conversation[]>([]);
+  const [isLoading, setIsLoading] = React.useState(false);
+  const [showConversationList, setShowConversationList] = React.useState(false);
+  const scrollViewRef = React.useRef<FlatList>(null);
 
-  const getGuidance = () => {
-    const lowerInput = input.toLowerCase().trim();
-    
-    // Find matching keyword
-    let matchedGuidance = defaultGuidance;
-    for (const [key, value] of Object.entries(guidanceDatabase)) {
-      if (lowerInput.includes(key)) {
-        matchedGuidance = value;
-        break;
+  React.useEffect(() => {
+    loadConversations();
+  }, []);
+
+  const loadConversations = async () => {
+    try {
+      const [activeConv, allConvs] = await Promise.all([
+        ConversationStorage.getActiveConversation(),
+        ConversationStorage.getAllConversations(),
+      ]);
+      
+      setConversations(allConvs);
+      
+      if (activeConv) {
+        setCurrentConversation(activeConv);
+      } else if (allConvs.length > 0) {
+        setCurrentConversation(allConvs[0]);
+        await ConversationStorage.setActiveConversation(allConvs[0].id);
+      } else {
+        // Create new conversation if none exist
+        const newConv = await ConversationStorage.createConversation('New Conversation');
+        setCurrentConversation(newConv);
+        setConversations([newConv]);
       }
+    } catch (error) {
+      console.error('Error loading conversations:', error);
     }
-    
-    setResponse(matchedGuidance);
-    setShowInput(false);
   };
 
-  const reset = () => {
+  const sendMessage = async () => {
+    if (!input.trim() || !currentConversation) return;
+
+    const userMessage: Message = {
+      role: 'user',
+      content: input.trim(),
+      timestamp: Date.now(),
+    };
+
+    setIsLoading(true);
     setInput('');
-    setResponse(null);
-    setShowInput(true);
+
+    try {
+      // Add user message
+      let updatedConv = await ConversationStorage.addMessage(currentConversation.id, userMessage);
+      if (updatedConv) {
+        setCurrentConversation(updatedConv);
+        setConversations(prev => 
+          prev.map(c => c.id === updatedConv!.id ? updatedConv! : c)
+        );
+      }
+
+      // Get AI response
+      const messages = updatedConv?.messages || [userMessage];
+      const aiResponse = await openRouterService.sendMessage(messages);
+
+      // Add AI message
+      const assistantMessage: Message = {
+        role: 'assistant',
+        content: aiResponse,
+        timestamp: Date.now(),
+      };
+
+      updatedConv = await ConversationStorage.addMessage(currentConversation.id, assistantMessage);
+      if (updatedConv) {
+        setCurrentConversation(updatedConv);
+        setConversations(prev => 
+          prev.map(c => c.id === updatedConv!.id ? updatedConv! : c)
+        );
+      }
+
+      // Scroll to bottom
+      setTimeout(() => {
+        scrollViewRef.current?.scrollToEnd({ animated: true });
+      }, 100);
+    } catch (error) {
+      console.error('Error sending message:', error);
+    } finally {
+      setIsLoading(false);
+    }
   };
+
+  const startNewConversation = async () => {
+    try {
+      const newConv = await ConversationStorage.createConversation();
+      setCurrentConversation(newConv);
+      setConversations(prev => [newConv, ...prev]);
+      setShowConversationList(false);
+    } catch (error) {
+      console.error('Error creating conversation:', error);
+    }
+  };
+
+  const switchConversation = async (conversation: Conversation) => {
+    setCurrentConversation(conversation);
+    await ConversationStorage.setActiveConversation(conversation.id);
+    setShowConversationList(false);
+  };
+
+  const deleteConversation = async (conversationId: string) => {
+    Alert.alert(
+      'Delete Conversation',
+      'Are you sure you want to delete this conversation?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            await ConversationStorage.deleteConversation(conversationId);
+            const updated = conversations.filter(c => c.id !== conversationId);
+            setConversations(updated);
+            
+            if (currentConversation?.id === conversationId && updated.length > 0) {
+              setCurrentConversation(updated[0]);
+              await ConversationStorage.setActiveConversation(updated[0].id);
+            } else if (updated.length === 0) {
+              await startNewConversation();
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const formatTime = (timestamp: number) => {
+    const date = new Date(timestamp);
+    return date.toLocaleTimeString('en-US', { 
+      hour: 'numeric', 
+      minute: '2-digit',
+      hour12: true 
+    });
+  };
+
+  const renderMessage = ({ item }: { item: Message }) => (
+    <View style={[
+      styles.messageContainer,
+      item.role === 'user' ? styles.userMessage : styles.assistantMessage,
+    ]}>
+      <View style={[
+        styles.messageBubble,
+        item.role === 'user' ? styles.userBubble : styles.assistantBubble,
+      ]}>
+        {item.role === 'assistant' && (
+          <MaterialIcons name="lightbulb" size={16} color={Colors.primary} style={styles.messageIcon} />
+        )}
+        <Text style={[
+          styles.messageText,
+          item.role === 'user' ? styles.userText : styles.assistantText,
+        ]}>
+          {item.content}
+        </Text>
+      </View>
+      <Text style={styles.messageTime}>{formatTime(item.timestamp)}</Text>
+    </View>
+  );
+
+  const renderConversationItem = ({ item }: { item: Conversation }) => (
+    <TouchableOpacity
+      style={[
+        styles.conversationItem,
+        currentConversation?.id === item.id && styles.activeConversation,
+      ]}
+      onPress={() => switchConversation(item)}
+    >
+      <View style={styles.conversationContent}>
+        <Text style={styles.conversationTitle} numberOfLines={1}>
+          {item.title}
+        </Text>
+        <Text style={styles.conversationTime}>
+          {new Date(item.updatedAt).toLocaleDateString()}
+        </Text>
+      </View>
+      <TouchableOpacity
+        style={styles.deleteButton}
+        onPress={() => deleteConversation(item.id)}
+      >
+        <MaterialIcons name="delete-outline" size={20} color={Colors.error} />
+      </TouchableOpacity>
+    </TouchableOpacity>
+  );
+
+  if (showConversationList) {
+    return (
+      <View style={[styles.container, { paddingTop: insets.top }]}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => setShowConversationList(false)}>
+            <MaterialIcons name="chevron-left" size={24} color={Colors.textLight} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Conversations</Text>
+          <TouchableOpacity onPress={startNewConversation}>
+            <MaterialIcons name="add" size={24} color={Colors.primary} />
+          </TouchableOpacity>
+        </View>
+
+        <FlatList
+          data={conversations}
+          renderItem={renderConversationItem}
+          keyExtractor={(item) => item.id}
+          style={styles.conversationList}
+          showsVerticalScrollIndicator={false}
+        />
+      </View>
+    );
+  }
 
   return (
     <KeyboardAvoidingView
@@ -168,82 +237,55 @@ export default function DharmaScreen() {
     >
       {/* Header */}
       <View style={styles.header}>
-        <MaterialIcons name="lightbulb" size={32} color={Colors.primary} />
+        <TouchableOpacity onPress={() => setShowConversationList(true)}>
+          <MaterialIcons name="menu" size={24} color={Colors.textLight} />
+        </TouchableOpacity>
         <Text style={styles.headerTitle}>Dharma</Text>
-        <Text style={styles.headerSubtitle}>What guidance do you seek?</Text>
+        <TouchableOpacity onPress={startNewConversation}>
+          <MaterialIcons name="add" size={24} color={Colors.primary} />
+        </TouchableOpacity>
       </View>
 
-      <ScrollView
-        style={styles.content}
-        contentContainerStyle={styles.contentContainer}
-        showsVerticalScrollIndicator={false}
-      >
-        {showInput ? (
-          <View style={styles.inputSection}>
-            <Text style={styles.prompt}>What are you dealing with?</Text>
-            
-            <TextInput
-              style={styles.input}
-              placeholder="I'm feeling anxious about..."
-              placeholderTextColor={Colors.textMuted}
-              value={input}
-              onChangeText={setInput}
-              multiline
-              numberOfLines={4}
-              textAlignVertical="top"
-            />
+      {/* Messages */}
+      {currentConversation && (
+        <FlatList
+          ref={scrollViewRef}
+          data={currentConversation.messages}
+          renderItem={renderMessage}
+          keyExtractor={(item, index) => `${item.timestamp}-${index}`}
+          style={styles.messagesList}
+          contentContainerStyle={styles.messagesContainer}
+          showsVerticalScrollIndicator={false}
+        />
+      )}
 
-            <TouchableOpacity
-              style={[styles.guidanceButton, !input.trim() && styles.buttonDisabled]}
-              onPress={getGuidance}
-              disabled={!input.trim()}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.buttonText}>Receive Guidance</Text>
-              <MaterialIcons name="auto-awesome" size={18} color={Colors.backgroundDark} />
-            </TouchableOpacity>
-
-            {/* Quick selectors */}
-            <View style={styles.quickTags}>
-              <Text style={styles.quickTagsLabel}>Common:</Text>
-              <View style={styles.tagsRow}>
-                {['anxious', 'lazy', 'angry', 'confused', 'tired'].map((tag) => (
-                  <TouchableOpacity
-                    key={tag}
-                    style={styles.tag}
-                    onPress={() => {
-                      setInput(`I'm feeling ${tag}`);
-                    }}
-                  >
-                    <Text style={styles.tagText}>{tag}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-          </View>
-        ) : (
-          <View style={styles.responseSection}>
-            {response && (
-              <>
-                <View style={styles.guidanceCard}>
-                  <MaterialIcons name="lightbulb" size={24} color={Colors.primary} style={styles.cardIcon} />
-                  <Text style={styles.guidanceText}>{response.guidance}</Text>
-                </View>
-
-                <View style={styles.quoteCard}>
-                  <MaterialIcons name="format-quote" size={20} color={Colors.primary} style={styles.quoteIcon} />
-                  <Text style={styles.quoteText}>{response.quote}</Text>
-                </View>
-              </>
-            )}
-
-            <TouchableOpacity style={styles.resetButton} onPress={reset} activeOpacity={0.8}>
-              <MaterialIcons name="refresh" size={18} color={Colors.textLight} />
-              <Text style={styles.resetButtonText}>Ask Again</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-      </ScrollView>
+      {/* Input */}
+      <View style={styles.inputContainer}>
+        <TextInput
+          style={styles.input}
+          placeholder="What guidance do you seek?"
+          placeholderTextColor={Colors.textMuted}
+          value={input}
+          onChangeText={setInput}
+          multiline
+          maxLength={500}
+          editable={!isLoading}
+        />
+        <TouchableOpacity
+          style={[
+            styles.sendButton,
+            (!input.trim() || isLoading) && styles.sendButtonDisabled,
+          ]}
+          onPress={sendMessage}
+          disabled={!input.trim() || isLoading}
+        >
+          {isLoading ? (
+            <MaterialIcons name="hourglass-empty" size={20} color={Colors.textMuted} />
+          ) : (
+            <MaterialIcons name="send" size={20} color={Colors.backgroundDark} />
+          )}
+        </TouchableOpacity>
+      </View>
     </KeyboardAvoidingView>
   );
 }
@@ -254,159 +296,146 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.backgroundDark,
   },
   header: {
+    flexDirection: 'row',
     alignItems: 'center',
-    paddingTop: 20,
-    paddingBottom: 24,
-    paddingHorizontal: 24,
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.borderLight,
   },
   headerTitle: {
     fontFamily: Typography.serif.join(','),
-    fontSize: 28,
+    fontSize: 20,
     fontWeight: '700',
     color: Colors.textLight,
-    marginTop: 12,
-    marginBottom: 4,
   },
-  headerSubtitle: {
-    fontFamily: Typography.display.join(','),
-    fontSize: 14,
-    color: Colors.textMuted,
-    textAlign: 'center',
-  },
-  content: {
+  conversationList: {
     flex: 1,
+    paddingHorizontal: 20,
   },
-  contentContainer: {
-    paddingHorizontal: 24,
-    paddingBottom: 32,
-  },
-  inputSection: {
-    gap: 20,
-  },
-  prompt: {
-    fontFamily: Typography.display.join(','),
-    fontSize: 18,
-    fontWeight: '500',
-    color: Colors.textLight,
-    textAlign: 'center',
-    marginBottom: 8,
-  },
-  input: {
-    backgroundColor: `${Colors.textLight}0A`,
-    borderWidth: 1,
-    borderColor: Colors.borderLight,
-    borderRadius: BorderRadius.xl,
-    padding: 20,
-    fontFamily: Typography.display.join(','),
-    fontSize: 16,
-    color: Colors.textLight,
-    lineHeight: 24,
-    minHeight: 120,
-    textAlignVertical: 'top',
-  },
-  guidanceButton: {
+  conversationItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    backgroundColor: Colors.primary,
-    borderRadius: BorderRadius.xl,
+    justifyContent: 'space-between',
     paddingVertical: 16,
-    ...Shadow.primary,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.borderLight,
   },
-  buttonDisabled: {
-    backgroundColor: Colors.saffronMuted,
-    opacity: 0.5,
+  activeConversation: {
+    backgroundColor: `${Colors.primary}1A`,
+    borderRadius: BorderRadius.lg,
+    paddingHorizontal: 12,
   },
-  buttonText: {
+  conversationContent: {
+    flex: 1,
+  },
+  conversationTitle: {
     fontFamily: Typography.display.join(','),
     fontSize: 16,
-    fontWeight: '700',
-    color: Colors.backgroundDark,
+    fontWeight: '500',
+    color: Colors.textLight,
+    marginBottom: 4,
   },
-  quickTags: {
-    marginTop: 8,
-  },
-  quickTagsLabel: {
+  conversationTime: {
     fontFamily: Typography.display.join(','),
     fontSize: 12,
     color: Colors.textMuted,
-    marginBottom: 12,
   },
-  tagsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
+  deleteButton: {
+    padding: 8,
   },
-  tag: {
-    backgroundColor: `${Colors.primary}1A`,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: BorderRadius.full,
-    borderWidth: 1,
-    borderColor: `${Colors.primary}33`,
+  messagesList: {
+    flex: 1,
   },
-  tagText: {
-    fontFamily: Typography.display.join(','),
-    fontSize: 13,
-    color: Colors.primary,
-    fontWeight: '500',
+  messagesContainer: {
+    paddingHorizontal: 20,
+    paddingVertical: 16,
   },
-  responseSection: {
-    gap: 20,
+  messageContainer: {
+    marginBottom: 16,
   },
-  guidanceCard: {
-    backgroundColor: `${Colors.primary}1A`,
-    borderWidth: 1,
-    borderColor: `${Colors.primary}33`,
+  userMessage: {
+    alignItems: 'flex-end',
+  },
+  assistantMessage: {
+    alignItems: 'flex-start',
+  },
+  messageBubble: {
+    maxWidth: '80%',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     borderRadius: BorderRadius.xl,
-    padding: 24,
-    gap: 12,
-  },
-  cardIcon: {
-    marginBottom: 4,
-  },
-  guidanceText: {
-    fontFamily: Typography.display.join(','),
-    fontSize: 18,
-    fontWeight: '500',
-    color: Colors.textLight,
-    lineHeight: 28,
-  },
-  quoteCard: {
-    backgroundColor: `${Colors.textLight}0A`,
-    borderLeftWidth: 3,
-    borderLeftColor: Colors.primary,
-    borderRadius: BorderRadius.lg,
-    padding: 20,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
     gap: 8,
   },
-  quoteIcon: {
-    opacity: 0.7,
+  userBubble: {
+    backgroundColor: Colors.primary,
+    borderBottomRightRadius: 4,
   },
-  quoteText: {
-    fontFamily: Typography.display.join(','),
-    fontSize: 14,
-    color: Colors.textMuted,
-    fontStyle: 'italic',
+  assistantBubble: {
+    backgroundColor: `${Colors.textLight}0A`,
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
+    borderBottomLeftRadius: 4,
+  },
+  messageIcon: {
+    marginTop: 2,
+  },
+  messageText: {
+    flex: 1,
+    fontSize: 15,
     lineHeight: 22,
   },
-  resetButton: {
+  userText: {
+    color: Colors.backgroundDark,
+    fontFamily: Typography.display.join(','),
+    fontWeight: '500',
+  },
+  assistantText: {
+    color: Colors.textLight,
+    fontFamily: Typography.display.join(','),
+  },
+  messageTime: {
+    fontSize: 11,
+    color: Colors.textMuted,
+    marginTop: 4,
+    marginHorizontal: 16,
+  },
+  inputContainer: {
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
+    alignItems: 'flex-end',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderTopWidth: 1,
+    borderTopColor: Colors.borderLight,
+    gap: 12,
+  },
+  input: {
+    flex: 1,
     backgroundColor: `${Colors.textLight}0A`,
     borderWidth: 1,
     borderColor: Colors.borderLight,
     borderRadius: BorderRadius.xl,
-    paddingVertical: 14,
-    marginTop: 8,
-  },
-  resetButtonText: {
-    fontFamily: Typography.display.join(','),
-    fontSize: 14,
-    fontWeight: '600',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontSize: 15,
     color: Colors.textLight,
+    maxHeight: 100,
+    fontFamily: Typography.display.join(','),
+  },
+  sendButton: {
+    backgroundColor: Colors.primary,
+    width: 44,
+    height: 44,
+    borderRadius: BorderRadius.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...Shadow.primary,
+  },
+  sendButtonDisabled: {
+    backgroundColor: Colors.saffronMuted,
+    opacity: 0.5,
   },
 });
