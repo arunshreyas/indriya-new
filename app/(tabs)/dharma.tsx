@@ -15,6 +15,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { Colors, Typography, BorderRadius, Shadow } from '@/constants/theme';
 import { openRouterService, Message, Conversation } from '@/services/openRouter';
 import { ConversationStorage } from '@/utils/conversationStorage';
+import { TypingIndicator } from '@/components/TypingIndicator';
 
 export default function DharmaScreen() {
   const insets = useSafeAreaInsets();
@@ -256,6 +257,7 @@ export default function DharmaScreen() {
           style={styles.messagesList}
           contentContainerStyle={styles.messagesContainer}
           showsVerticalScrollIndicator={false}
+          ListFooterComponent={isLoading ? <TypingIndicator /> : null}
         />
       )}
 

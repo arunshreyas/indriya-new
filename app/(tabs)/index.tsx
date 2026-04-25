@@ -9,9 +9,22 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { Colors, Typography, BorderRadius, Shadow } from '@/constants/theme';
+import { UserStorage } from '@/utils/userStorage';
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
+  const [intention, setIntention] = React.useState('Develop discipline and reduce distractions');
+
+  React.useEffect(() => {
+    loadUserData();
+  }, []);
+
+  const loadUserData = async () => {
+    const data = await UserStorage.getUserData();
+    if (data.intention) {
+      setIntention(data.intention);
+    }
+  };
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -24,6 +37,13 @@ export default function HomeScreen() {
         <View style={styles.header}>
           <Text style={styles.greeting}>Welcome back</Text>
           <Text style={styles.subtext}>Return to your practice</Text>
+        </View>
+        
+        {/* Intention Card */}
+        <View style={styles.intentionCard}>
+          <Text style={styles.intentionTitle}>Your Intention</Text>
+          <Text style={styles.intentionText}>{intention}</Text>
+          <Text style={styles.intentionSubtext}>Return to this daily</Text>
         </View>
 
         {/* Today's Focus Card */}
@@ -123,6 +143,40 @@ const styles = StyleSheet.create({
     marginBottom: 32,
     alignItems: 'center',
     ...Shadow.primary,
+  },
+  intentionCard: {
+    backgroundColor: '#1A1A1A',
+    borderWidth: 1,
+    borderColor: '#2A2A2A',
+    borderRadius: BorderRadius.xl,
+    padding: 24,
+    marginBottom: 24,
+    alignItems: 'center',
+  },
+  intentionTitle: {
+    fontFamily: Typography.display.join(','),
+    fontSize: 12,
+    fontWeight: '700',
+    color: Colors.primary,
+    letterSpacing: 1.5,
+    textTransform: 'uppercase',
+    marginBottom: 12,
+  },
+  intentionText: {
+    fontFamily: Typography.serif.join(','),
+    fontSize: 20,
+    fontWeight: '400',
+    color: '#EAEAEA',
+    lineHeight: 28,
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  intentionSubtext: {
+    fontFamily: Typography.display.join(','),
+    fontSize: 12,
+    color: '#EAEAEA60',
+    textAlign: 'center',
+    fontStyle: 'italic',
   },
   focusTitle: {
     fontFamily: Typography.display.join(','),
