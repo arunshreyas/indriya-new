@@ -14,8 +14,12 @@ interface SettingItem {
   onPress?: () => void;
 }
 
+import { useAuth, useUser } from '@clerk/clerk-expo';
+
 export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
+  const { user } = useUser();
+  const { signOut } = useAuth();
   const [dailyReminders, setDailyReminders] = React.useState(true);
   const [silentMode, setSilentMode] = React.useState(false);
 
@@ -38,10 +42,13 @@ export default function SettingsScreen() {
     },
   ];
 
-  const handleSignOut = () => {
-    // TODO: Implement sign out functionality
-    console.log('Sign out pressed');
-    router.replace('/welcome');
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      router.replace('/welcome');
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
   };
 
   const handlePrivacyPolicy = () => {
@@ -145,14 +152,17 @@ export default function SettingsScreen() {
           <View style={styles.sectionContent}>
             <View style={styles.accountItem}>
               <View style={styles.accountInfo}>
-                <Text style={styles.accountLabel}>Method</Text>
-                <Text style={styles.accountValue}>Logged in via Apple</Text>
+                <Text style={styles.accountLabel}>Email</Text>
+                <Text style={styles.accountValue}>
+                  {user?.primaryEmailAddress?.emailAddress || 'Not available'}
+                </Text>
               </View>
-              <MaterialIcons 
-                name="apple" 
-                size={20} 
-                color={Colors.textMuted}
-              />
+              <View style={styles.accountInfo}>
+                <Text style={styles.accountLabel}>Method</Text>
+                <Text style={styles.accountValue}>
+                  {user?.externalAccounts[0]?.verification?.strategy || 'Email'}
+                </Text>
+              </View>
             </View>
             <View style={styles.divider} />
             <TouchableOpacity 

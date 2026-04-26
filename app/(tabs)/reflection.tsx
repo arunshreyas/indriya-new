@@ -14,6 +14,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { Colors, Typography, BorderRadius, Shadow } from '@/constants/theme';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useAuth } from '@clerk/clerk-expo';
+import { indriyaApi } from '@/services/indriyaApi';
 
 interface Reflection {
   id: string;
@@ -26,6 +28,7 @@ const STORAGE_KEY = '@indriya_reflections';
 
 export default function ReflectionScreen() {
   const insets = useSafeAreaInsets();
+  const { getToken, isSignedIn } = useAuth();
   const [reflections, setReflections] = React.useState<Reflection[]>([]);
   const [input, setInput] = React.useState('');
   const [showInput, setShowInput] = React.useState(false);
@@ -58,7 +61,7 @@ export default function ReflectionScreen() {
     }
   };
 
-  const saveReflection = () => {
+  const saveReflection = async () => {
     if (!input.trim()) return;
 
     const now = new Date();
@@ -87,6 +90,12 @@ export default function ReflectionScreen() {
       const updated = [newReflection, ...reflections];
       setReflections(updated);
       saveReflections(updated);
+
+      if (isSignedIn) {
+        indriyaApi.createReflection(getToken, newReflection.text).catch((error) => {
+          console.error('Failed to save reflection to API:', error);
+        });
+      }
     }
 
     setInput('');

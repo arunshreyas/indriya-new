@@ -1,9 +1,16 @@
-import { Colors } from '@/constants/theme';
-import { MaterialIcons } from '@expo/vector-icons';
-import { Tabs } from 'expo-router';
+import { useAuth } from '@clerk/clerk-expo';
+import { Redirect, Tabs } from 'expo-router';
 import React from 'react';
+import { MaterialIcons } from '@expo/vector-icons';
+import { Colors } from '@/constants/theme';
 
 export default function TabLayout() {
+  const { isSignedIn, isLoaded } = useAuth();
+
+  if (isLoaded && !isSignedIn) {
+    return <Redirect href="/welcome" />;
+  }
+
   return (
     <Tabs
       screenOptions={{
@@ -25,10 +32,10 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Practice',
+          title: 'Home',
           tabBarIcon: ({ color, focused }) => (
             <MaterialIcons 
-              name="self-improvement" 
+              name="home" 
               size={24} 
               color={focused ? Colors.primary : Colors.textMuted}
             />

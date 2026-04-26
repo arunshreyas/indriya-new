@@ -16,9 +16,12 @@ import { Colors, Typography, BorderRadius, Shadow } from '@/constants/theme';
 import { openRouterService, Message, Conversation } from '@/services/openRouter';
 import { ConversationStorage } from '@/utils/conversationStorage';
 import { TypingIndicator } from '@/components/TypingIndicator';
+import { useAuth } from '@clerk/clerk-expo';
+import { indriyaApi } from '@/services/indriyaApi';
 
 export default function DharmaScreen() {
   const insets = useSafeAreaInsets();
+  const { getToken, isSignedIn } = useAuth();
   const [input, setInput] = React.useState('');
   const [currentConversation, setCurrentConversation] = React.useState<Conversation | null>(null);
   const [conversations, setConversations] = React.useState<Conversation[]>([]);
@@ -94,6 +97,15 @@ export default function DharmaScreen() {
         setConversations(prev => 
           prev.map(c => c.id === updatedConv!.id ? updatedConv! : c)
         );
+      }
+
+      if (isSignedIn) {
+        indriyaApi.createDharmaLog(getToken, {
+          prompt: userMessage.content,
+          response: aiResponse,
+        }).catch((error) => {
+          console.error('Failed to save Dharma log to API:', error);
+        });
       }
 
       // Scroll to bottom

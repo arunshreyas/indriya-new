@@ -1,4 +1,6 @@
 import { BorderRadius, Colors, Shadow, Typography } from '@/constants/theme';
+import { indriyaApi } from '@/services/indriyaApi';
+import { useAuth } from '@clerk/clerk-expo';
 import { MaterialIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React from 'react';
@@ -7,14 +9,20 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function MorningRitualScreen() {
   const insets = useSafeAreaInsets();
+  const { getToken, isSignedIn } = useAuth();
   const [isPlaying, setIsPlaying] = React.useState(false);
 
   const handlePlayAudio = () => {
     setIsPlaying(!isPlaying);
   };
 
-  const handleCompleteRitual = () => {
-    // TODO: Mark ritual as completed
+  const handleCompleteRitual = async () => {
+    if (isSignedIn) {
+      await indriyaApi.createPractice(getToken, { completed: true }).catch((error) => {
+        console.error('Failed to save practice to API:', error);
+      });
+    }
+
     router.back();
   };
 

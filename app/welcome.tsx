@@ -1,22 +1,67 @@
 import { BorderRadius, Colors, Shadow, Typography } from '@/constants/theme';
+import { useAuth, useSSO } from '@clerk/clerk-expo';
 import { MaterialIcons } from '@expo/vector-icons';
+import * as Linking from 'expo-linking';
 import { router } from 'expo-router';
+import * as WebBrowser from 'expo-web-browser';
 import React from 'react';
-import { Dimensions, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Dimensions, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+import { useWarmUpBrowser } from '@/hooks/useWarmUpBrowser';
+
+WebBrowser.maybeCompleteAuthSession();
 
 const { width } = Dimensions.get('window');
 
 export default function WelcomeScreen() {
+  useWarmUpBrowser();
   const insets = useSafeAreaInsets();
+  const { isSignedIn } = useAuth();
+  const { startSSOFlow } = useSSO();
+  const [isAuthLoading, setIsAuthLoading] = React.useState(false);
 
-  const handleGoogleSignIn = () => {
-    // TODO: Implement Google Sign-In
-    router.push('/onboarding');
+  React.useEffect(() => {
+    if (isSignedIn) {
+      router.replace('/onboarding');
+    }
+  }, [isSignedIn]);
+
+  const handleGoogleSignIn = async () => {
+    console.log('Google sign-in button pressed');
+    if (isAuthLoading) {
+      console.log('Auth is already loading, ignoring click');
+      return;
+    }
+    setIsAuthLoading(true);
+
+    try {
+      console.log('Attempting SSO flow...');
+      const { createdSessionId, setActive } = await startSSOFlow({
+        strategy: 'oauth_google',
+        // For Expo Go, Clerk usually handles the redirect automatically if redirectUrl is omitted,
+        // or if it matches the Clerk dashboard configuration.
+        redirectUrl: Linking.createURL('/onboarding', { scheme: 'indriyam' }),
+      });
+
+      console.log('SSO flow result:', { createdSessionId });
+
+      if (createdSessionId) {
+        console.log('Setting active session...');
+        await setActive?.({ session: createdSessionId });
+        console.log('Navigating to onboarding...');
+        router.replace('/onboarding');
+      }
+    } catch (error) {
+      console.error('Google sign-in failed error detail:', error);
+      Alert.alert('Sign in failed', 'Please try again.');
+    } finally {
+      setIsAuthLoading(false);
+    }
   };
 
   const handleEmailSignIn = () => {
-    // TODO: Implement Email Sign-In
+    // Email auth UI is still pending; keep demo access available during MVP wiring.
     router.push('/onboarding');
   };
 
@@ -65,14 +110,20 @@ export default function WelcomeScreen() {
             style={[styles.authButton, styles.googleButton]}
             onPress={handleGoogleSignIn}
             activeOpacity={0.8}
+            disabled={isAuthLoading}
           >
-            <View style={styles.googleIcon}>
-              {/* Google SVG would go here - using MaterialIcons as placeholder */}
-              <MaterialIcons name="search" size={20} color="#4285F4" />
-            </View>
-            <Text style={[styles.authButtonText, styles.googleButtonText]}>
-              Continue with Google
-            </Text>
+            {isAuthLoading ? (
+              <ActivityIndicator color={Colors.charcoal} />
+            ) : (
+              <>
+                <View style={styles.googleIcon}>
+                  <MaterialIcons name="search" size={20} color="#4285F4" />
+                </View>
+                <Text style={[styles.authButtonText, styles.googleButtonText]}>
+                  Continue with Google
+                </Text>
+              </>
+            )}
           </TouchableOpacity>
 
           <TouchableOpacity 

@@ -1,5 +1,7 @@
 import { BorderRadius, Colors, Shadow, Typography } from '@/constants/theme';
+import { indriyaApi } from '@/services/indriyaApi';
 import { UserStorage } from '@/utils/userStorage';
+import { useAuth } from '@clerk/clerk-expo';
 import { MaterialIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
@@ -37,13 +39,23 @@ const intentionOptions: IntentionOption[] = [
 export default function OnboardingScreen() {
   const [selectedIntention, setSelectedIntention] = useState('discipline');
   const insets = useSafeAreaInsets();
+  const { getToken, isSignedIn } = useAuth();
 
   const handleBeginPractice = async () => {
     const selected = intentionOptions.find((option) => option.id === selectedIntention);
+    const intention = selected?.intention ?? intentionOptions[0].intention;
+
     await UserStorage.saveUserData({
-      intention: selected?.intention ?? intentionOptions[0].intention,
+      intention,
       onboarded: true,
     });
+
+    if (isSignedIn) {
+      await indriyaApi.createIntention(getToken, { content: intention }).catch((error) => {
+        console.error('Failed to save intention to API:', error);
+      });
+    }
+
     router.replace('/(tabs)');
   };
 
