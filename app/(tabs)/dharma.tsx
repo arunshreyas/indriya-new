@@ -21,7 +21,7 @@ import { indriyaApi } from '@/services/indriyaApi';
 
 export default function DharmaScreen() {
   const insets = useSafeAreaInsets();
-  const { getToken, isSignedIn } = useAuth();
+  const { getToken, isSignedIn, userId: clerkUserId } = useAuth();
   const [input, setInput] = React.useState('');
   const [currentConversation, setCurrentConversation] = React.useState<Conversation | null>(null);
   const [conversations, setConversations] = React.useState<Conversation[]>([]);
@@ -31,13 +31,13 @@ export default function DharmaScreen() {
 
   React.useEffect(() => {
     loadConversations();
-  }, []);
+  }, [clerkUserId]);
 
   const loadConversations = async () => {
     try {
       const [activeConv, allConvs] = await Promise.all([
-        ConversationStorage.getActiveConversation(),
-        ConversationStorage.getAllConversations(),
+        ConversationStorage.getActiveConversation(clerkUserId || undefined),
+        ConversationStorage.getAllConversations(clerkUserId || undefined),
       ]);
       
       setConversations(allConvs);
@@ -46,10 +46,10 @@ export default function DharmaScreen() {
         setCurrentConversation(activeConv);
       } else if (allConvs.length > 0) {
         setCurrentConversation(allConvs[0]);
-        await ConversationStorage.setActiveConversation(allConvs[0].id);
+        await ConversationStorage.setActiveConversation(allConvs[0].id, clerkUserId || undefined);
       } else {
         // Create new conversation if none exist
-        const newConv = await ConversationStorage.createConversation('New Conversation');
+        const newConv = await ConversationStorage.createConversation('New Conversation', clerkUserId || undefined);
         setCurrentConversation(newConv);
         setConversations([newConv]);
       }
@@ -72,7 +72,7 @@ export default function DharmaScreen() {
 
     try {
       // Add user message
-      let updatedConv = await ConversationStorage.addMessage(currentConversation.id, userMessage);
+      let updatedConv = await ConversationStorage.addMessage(currentConversation.id, userMessage, clerkUserId || undefined);
       if (updatedConv) {
         setCurrentConversation(updatedConv);
         setConversations(prev => 
@@ -91,7 +91,7 @@ export default function DharmaScreen() {
         timestamp: Date.now(),
       };
 
-      updatedConv = await ConversationStorage.addMessage(currentConversation.id, assistantMessage);
+      updatedConv = await ConversationStorage.addMessage(currentConversation.id, assistantMessage, clerkUserId || undefined);
       if (updatedConv) {
         setCurrentConversation(updatedConv);
         setConversations(prev => 
@@ -121,7 +121,7 @@ export default function DharmaScreen() {
 
   const startNewConversation = async () => {
     try {
-      const newConv = await ConversationStorage.createConversation();
+      const newConv = await ConversationStorage.createConversation(undefined, clerkUserId || undefined);
       setCurrentConversation(newConv);
       setConversations(prev => [newConv, ...prev]);
       setShowConversationList(false);
@@ -132,7 +132,7 @@ export default function DharmaScreen() {
 
   const switchConversation = async (conversation: Conversation) => {
     setCurrentConversation(conversation);
-    await ConversationStorage.setActiveConversation(conversation.id);
+    await ConversationStorage.setActiveConversation(conversation.id, clerkUserId || undefined);
     setShowConversationList(false);
   };
 
@@ -146,13 +146,13 @@ export default function DharmaScreen() {
           text: 'Delete',
           style: 'destructive',
           onPress: async () => {
-            await ConversationStorage.deleteConversation(conversationId);
+            await ConversationStorage.deleteConversation(conversationId, clerkUserId || undefined);
             const updated = conversations.filter(c => c.id !== conversationId);
             setConversations(updated);
             
             if (currentConversation?.id === conversationId && updated.length > 0) {
               setCurrentConversation(updated[0]);
-              await ConversationStorage.setActiveConversation(updated[0].id);
+              await ConversationStorage.setActiveConversation(updated[0].id, clerkUserId || undefined);
             } else if (updated.length === 0) {
               await startNewConversation();
             }

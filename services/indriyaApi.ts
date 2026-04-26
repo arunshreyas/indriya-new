@@ -132,6 +132,10 @@ export const indriyaApi = {
     });
   },
 
+  async getReflections(getToken: GetToken) {
+    return authFetch<ApiReflection[]>(getToken, '/reflection');
+  },
+
   async createPractice(
     getToken: GetToken,
     input: { date?: Date; completed?: boolean } = {}
@@ -156,5 +160,9 @@ export const indriyaApi = {
         response: input.response,
       }),
     });
+  },
+
+  async getDharmaLogs(getToken: GetToken) {
+    return authFetch<ApiDharmaLog[]>(getToken, '/dharma-log');
   },
 };

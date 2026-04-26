@@ -9,6 +9,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
+  RefreshControl,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -28,34 +29,69 @@ const STORAGE_KEY = '@indriya_reflections';
 
 export default function ReflectionScreen() {
   const insets = useSafeAreaInsets();
-  const { getToken, isSignedIn } = useAuth();
+  const { getToken, isSignedIn, userId: clerkUserId } = useAuth();
   const [reflections, setReflections] = React.useState<Reflection[]>([]);
   const [input, setInput] = React.useState('');
   const [showInput, setShowInput] = React.useState(false);
   const [editingId, setEditingId] = React.useState<string | null>(null);
+  const [isRefreshing, setIsRefreshing] = React.useState(false);
 
-  // Load reflections on mount
+  // Dynamic storage key based on userId to prevent data leakage between users on same device
+  const storageKey = clerkUserId ? `${STORAGE_KEY}_${clerkUserId}` : STORAGE_KEY;
+
+  // Load reflections on mount or user change
   React.useEffect(() => {
     loadReflections();
-  }, []);
+    if (isSignedIn) {
+      syncWithApi();
+    }
+  }, [isSignedIn, clerkUserId]);
 
   const loadReflections = async () => {
     try {
-      const stored = await AsyncStorage.getItem(STORAGE_KEY);
+      const stored = await AsyncStorage.getItem(storageKey);
       if (stored) {
         const parsed = JSON.parse(stored);
-        // Sort by date descending
         parsed.sort((a: Reflection, b: Reflection) => b.timestamp - a.timestamp);
         setReflections(parsed);
+      } else {
+        setReflections([]);
       }
     } catch (error) {
       console.error('Failed to load reflections:', error);
     }
   };
 
+  const syncWithApi = async () => {
+    if (!isSignedIn) return;
+    setIsRefreshing(true);
+    try {
+      const apiReflections = await indriyaApi.getReflections(getToken);
+      
+      // Transform API format to local format
+      const formatted: Reflection[] = apiReflections.map(r => ({
+        id: r.id,
+        text: r.content,
+        date: new Date(r.createdAt).toLocaleDateString('en-US', {
+          month: 'short',
+          day: 'numeric',
+          year: 'numeric',
+        }),
+        timestamp: new Date(r.createdAt).getTime(),
+      }));
+
+      setReflections(formatted);
+      await AsyncStorage.setItem(storageKey, JSON.stringify(formatted));
+    } catch (error) {
+      console.error('Failed to sync reflections with API:', error);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
   const saveReflections = async (newReflections: Reflection[]) => {
     try {
-      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(newReflections));
+      await AsyncStorage.setItem(storageKey, JSON.stringify(newReflections));
     } catch (error) {
       console.error('Failed to save reflections:', error);
     }
@@ -149,6 +185,14 @@ export default function ReflectionScreen() {
         style={styles.content}
         contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={syncWithApi}
+            tintColor={Colors.primary}
+            colors={[Colors.primary]}
+          />
+        }
       >
         {/* Add New Button */}
         {!showInput && (

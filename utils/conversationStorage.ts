@@ -4,11 +4,17 @@ import { Conversation, Message } from '@/services/openRouter';
 const CONVERSATIONS_KEY = '@indriya_conversations';
 const ACTIVE_CONVERSATION_KEY = '@indriya_active_conversation';
 
+const getKeys = (userId?: string) => ({
+  conversations: userId ? `${CONVERSATIONS_KEY}_${userId}` : CONVERSATIONS_KEY,
+  active: userId ? `${ACTIVE_CONVERSATION_KEY}_${userId}` : ACTIVE_CONVERSATION_KEY,
+});
+
 export class ConversationStorage {
   // Get all conversations
-  static async getAllConversations(): Promise<Conversation[]> {
+  static async getAllConversations(userId?: string): Promise<Conversation[]> {
+    const keys = getKeys(userId);
     try {
-      const stored = await AsyncStorage.getItem(CONVERSATIONS_KEY);
+      const stored = await AsyncStorage.getItem(keys.conversations);
       return stored ? JSON.parse(stored) : [];
     } catch (error) {
       console.error('Error loading conversations:', error);
@@ -17,21 +23,23 @@ export class ConversationStorage {
   }
 
   // Save all conversations
-  static async saveAllConversations(conversations: Conversation[]): Promise<void> {
+  static async saveAllConversations(conversations: Conversation[], userId?: string): Promise<void> {
+    const keys = getKeys(userId);
     try {
-      await AsyncStorage.setItem(CONVERSATIONS_KEY, JSON.stringify(conversations));
+      await AsyncStorage.setItem(keys.conversations, JSON.stringify(conversations));
     } catch (error) {
       console.error('Error saving conversations:', error);
     }
   }
 
   // Get active conversation
-  static async getActiveConversation(): Promise<Conversation | null> {
+  static async getActiveConversation(userId?: string): Promise<Conversation | null> {
+    const keys = getKeys(userId);
     try {
-      const activeId = await AsyncStorage.getItem(ACTIVE_CONVERSATION_KEY);
+      const activeId = await AsyncStorage.getItem(keys.active);
       if (!activeId) return null;
 
-      const conversations = await this.getAllConversations();
+      const conversations = await this.getAllConversations(userId);
       return conversations.find(c => c.id === activeId) || null;
     } catch (error) {
       console.error('Error loading active conversation:', error);
@@ -40,16 +48,17 @@ export class ConversationStorage {
   }
 
   // Set active conversation
-  static async setActiveConversation(conversationId: string): Promise<void> {
+  static async setActiveConversation(conversationId: string, userId?: string): Promise<void> {
+    const keys = getKeys(userId);
     try {
-      await AsyncStorage.setItem(ACTIVE_CONVERSATION_KEY, conversationId);
+      await AsyncStorage.setItem(keys.active, conversationId);
     } catch (error) {
       console.error('Error setting active conversation:', error);
     }
   }
 
   // Create new conversation
-  static async createConversation(title?: string): Promise<Conversation> {
+  static async createConversation(title?: string, userId?: string): Promise<Conversation> {
     const newConversation: Conversation = {
       id: Date.now().toString(),
       title: title || 'New Conversation',
@@ -58,18 +67,18 @@ export class ConversationStorage {
       updatedAt: Date.now(),
     };
 
-    const conversations = await this.getAllConversations();
+    const conversations = await this.getAllConversations(userId);
     conversations.unshift(newConversation); // Add to beginning
-    await this.saveAllConversations(conversations);
-    await this.setActiveConversation(newConversation.id);
+    await this.saveAllConversations(conversations, userId);
+    await this.setActiveConversation(newConversation.id, userId);
 
     return newConversation;
   }
 
   // Add message to conversation
-  static async addMessage(conversationId: string, message: Omit<Message, 'timestamp'>): Promise<Conversation | null> {
+  static async addMessage(conversationId: string, message: Omit<Message, 'timestamp'>, userId?: string): Promise<Conversation | null> {
     try {
-      const conversations = await this.getAllConversations();
+      const conversations = await this.getAllConversations(userId);
       const conversationIndex = conversations.findIndex(c => c.id === conversationId);
       
       if (conversationIndex === -1) return null;
@@ -92,7 +101,7 @@ export class ConversationStorage {
         conversations[conversationIndex].title = title + (message.content.length > 30 ? '...' : '');
       }
 
-      await this.saveAllConversations(conversations);
+      await this.saveAllConversations(conversations, userId);
       return conversations[conversationIndex];
     } catch (error) {
       console.error('Error adding message:', error);
@@ -101,16 +110,17 @@ export class ConversationStorage {
   }
 
   // Delete conversation
-  static async deleteConversation(conversationId: string): Promise<void> {
+  static async deleteConversation(conversationId: string, userId?: string): Promise<void> {
+    const keys = getKeys(userId);
     try {
-      const conversations = await this.getAllConversations();
+      const conversations = await this.getAllConversations(userId);
       const filtered = conversations.filter(c => c.id !== conversationId);
-      await this.saveAllConversations(filtered);
+      await this.saveAllConversations(filtered, userId);
 
       // Clear active conversation if it was the deleted one
-      const activeId = await AsyncStorage.getItem(ACTIVE_CONVERSATION_KEY);
+      const activeId = await AsyncStorage.getItem(keys.active);
       if (activeId === conversationId) {
-        await AsyncStorage.removeItem(ACTIVE_CONVERSATION_KEY);
+        await AsyncStorage.removeItem(keys.active);
       }
     } catch (error) {
       console.error('Error deleting conversation:', error);
@@ -118,19 +128,20 @@ export class ConversationStorage {
   }
 
   // Clear all conversations
-  static async clearAllConversations(): Promise<void> {
+  static async clearAllConversations(userId?: string): Promise<void> {
+    const keys = getKeys(userId);
     try {
-      await AsyncStorage.removeItem(CONVERSATIONS_KEY);
-      await AsyncStorage.removeItem(ACTIVE_CONVERSATION_KEY);
+      await AsyncStorage.removeItem(keys.conversations);
+      await AsyncStorage.removeItem(keys.active);
     } catch (error) {
       console.error('Error clearing conversations:', error);
     }
   }
 
   // Get conversation by ID
-  static async getConversation(conversationId: string): Promise<Conversation | null> {
+  static async getConversation(conversationId: string, userId?: string): Promise<Conversation | null> {
     try {
-      const conversations = await this.getAllConversations();
+      const conversations = await this.getAllConversations(userId);
       return conversations.find(c => c.id === conversationId) || null;
     } catch (error) {
       console.error('Error getting conversation:', error);

@@ -15,8 +15,12 @@ import {
     TextInput,
     TouchableOpacity,
     View,
+    ScrollView,
+    FlatList,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+import { openRouterService, Message } from '@/services/openRouter';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -38,11 +42,14 @@ export default function GitaReadingScreen() {
   const [loading, setLoading] = React.useState(true);
   const [aiExpanded, setAiExpanded] = React.useState(false);
   const [inputText, setInputText] = React.useState('');
+  const [aiResponse, setAiResponse] = React.useState<string | null>(null);
+  const [aiLoading, setAiLoading] = React.useState(false);
 
   // Animation values
   const slideAnim = React.useRef(new Animated.Value(0)).current;
-  const aiHeightAnim = React.useRef(new Animated.Value(60)).current;
-  const aiOpacityAnim = React.useRef(new Animated.Value(0.7)).current;
+  const aiHeightAnim = React.useRef(new Animated.Value(56)).current;
+  const aiWidthAnim = React.useRef(new Animated.Value(56)).current;
+  const aiOpacityAnim = React.useRef(new Animated.Value(0.9)).current;
 
   const loadChapterData = React.useCallback(async () => {
     try {
@@ -55,8 +62,9 @@ export default function GitaReadingScreen() {
       setChapterInfo(chapterData);
 
       const displayVerses: DisplayVerse[] = versesData.map((verse) => {
+        // Find English translation (check both 'en' and 'english' case-insensitive)
         const englishTranslation = verse.translations.find(
-          t => t.language === 'en'
+          t => t.language.toLowerCase() === 'en' || t.language.toLowerCase() === 'english'
         )?.description || 'Translation not available';
 
         return {
@@ -83,19 +91,19 @@ export default function GitaReadingScreen() {
   // Swipe gesture handler
   const panResponder = React.useRef(
     PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: (_, gestureState) => {
-        return Math.abs(gestureState.dx) > 20;
+      onStartShouldSetPanResponder: () => false,
+      onMoveShouldSetPanResponderCapture: (_, gestureState) => {
+        // Only capture horizontal swipes that are clearly horizontal
+        return Math.abs(gestureState.dx) > 10 && Math.abs(gestureState.dx) > Math.abs(gestureState.dy) * 2;
       },
       onPanResponderRelease: (_, gestureState) => {
-        if (gestureState.dx < -50 && currentVerseIndex < verses.length - 1) {
-          // Swipe left - next verse
-          goToNextVerse();
-        } else if (gestureState.dx > 50 && currentVerseIndex > 0) {
-          // Swipe right - previous verse
+        if (gestureState.dx > 50 && currentVerseIndex > 0) {
           goToPreviousVerse();
+        } else if (gestureState.dx < -50 && currentVerseIndex < verses.length - 1) {
+          goToNextVerse();
         }
       },
+      onPanResponderTerminationRequest: () => false,
     })
   ).current;
 
@@ -140,37 +148,72 @@ export default function GitaReadingScreen() {
       // Collapse
       Animated.parallel([
         Animated.timing(aiHeightAnim, {
-          toValue: 60,
+          toValue: 56,
+          duration: 300,
+          useNativeDriver: false,
+        }),
+        Animated.timing(aiWidthAnim, {
+          toValue: 56,
           duration: 300,
           useNativeDriver: false,
         }),
         Animated.timing(aiOpacityAnim, {
-          toValue: 0.7,
+          toValue: 0.9,
           duration: 300,
-          useNativeDriver: true,
+          useNativeDriver: false,
         }),
       ]).start();
     } else {
       // Expand
       Animated.parallel([
         Animated.timing(aiHeightAnim, {
-          toValue: 280,
+          toValue: 400,
+          duration: 300,
+          useNativeDriver: false,
+        }),
+        Animated.timing(aiWidthAnim, {
+          toValue: SCREEN_WIDTH - 32,
           duration: 300,
           useNativeDriver: false,
         }),
         Animated.timing(aiOpacityAnim, {
           toValue: 1,
           duration: 300,
-          useNativeDriver: true,
+          useNativeDriver: false,
         }),
       ]).start();
     }
     setAiExpanded(!aiExpanded);
   };
 
-  const handleAskQuestion = () => {
-    console.log('Ask about verse', currentVerseIndex + 1, ':', inputText);
+  const handleAskQuestion = async (predefinedQuestion?: string) => {
+    const question = predefinedQuestion || inputText;
+    if (!question.trim()) return;
+
+    setAiLoading(true);
+    setAiResponse(null);
     setInputText('');
+
+    if (!aiExpanded) {
+      toggleAiOverlay();
+    }
+
+    try {
+      const currentVerse = verses[currentVerseIndex];
+      const context = `The user is reading Bhagavad Gita Chapter ${chapterNumber}, Verse ${currentVerse?.verseNumber}.\nSanskrit: ${currentVerse?.sanskrit}\nTranslation: ${currentVerse?.translation}\n\nUser Question: ${question}`;
+      
+      const messages: Message[] = [
+        { role: 'user', content: context, timestamp: Date.now() }
+      ];
+
+      const response = await openRouterService.sendMessage(messages);
+      setAiResponse(response);
+    } catch (error) {
+      console.error('Failed to get AI response:', error);
+      setAiResponse('Forgive me, but I am unable to connect to the divine source right now. Please try again later.');
+    } finally {
+      setAiLoading(false);
+    }
   };
 
   const currentVerse = verses[currentVerseIndex];
@@ -186,7 +229,6 @@ export default function GitaReadingScreen() {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
-      {/* Book Header */}
       <View style={styles.bookHeader}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <MaterialIcons name="arrow-back" size={20} color={Colors.textMuted} />
@@ -201,54 +243,55 @@ export default function GitaReadingScreen() {
           </Text>
         </View>
       </View>
-
-      {/* Book Content - Swipeable Area */}
-      <View style={styles.bookContainer} {...panResponder.panHandlers}>
-        {/* Page edges decoration */}
+      {/* Book Content - Native Paging Area */}
+      <View style={styles.bookContainer}>
         <View style={styles.pageLeftEdge} />
         <View style={styles.pageRightEdge} />
 
-        {/* Main content */}
-        <Animated.View
-          style={[
-            styles.pageContent,
-            { transform: [{ translateX: slideAnim }] }
-          ]}
-        >
-          {currentVerse && (
-            <>
-              {/* Verse Number */}
-              <View style={styles.verseNumberContainer}>
-                <Text style={styles.verseNumber}>Verse {currentVerse.verseNumber}</Text>
-                <View style={styles.verseNumberLine} />
+        {verses.length > 0 && (
+          <FlatList
+            data={verses}
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            keyExtractor={(item) => item.id}
+            initialScrollIndex={currentVerseIndex}
+            getItemLayout={(_, index) => ({
+              length: SCREEN_WIDTH - 32,
+              offset: (SCREEN_WIDTH - 32) * index,
+              index,
+            })}
+            onMomentumScrollEnd={(e) => {
+              const index = Math.round(e.nativeEvent.contentOffset.x / (SCREEN_WIDTH - 32));
+              if (index !== currentVerseIndex) {
+                setCurrentVerseIndex(index);
+              }
+            }}
+            renderItem={({ item: verse }) => (
+              <View style={styles.versePage}>
+                <ScrollView 
+                  style={styles.bookScroll}
+                  contentContainerStyle={styles.bookScrollContent}
+                  showsVerticalScrollIndicator={false}
+                >
+                  <View style={styles.verseNumberContainer}>
+                    <Text style={styles.verseNumber}>Verse {verse.verseNumber}</Text>
+                    <View style={styles.verseNumberLine} />
+                  </View>
+
+                  <Text style={styles.sanskritText}>{verse.sanskrit}</Text>
+
+                  <View style={styles.translationContainer}>
+                    <Text style={styles.translationLabel}>Translation</Text>
+                    <Text style={styles.translationText}>{verse.translation}</Text>
+                  </View>
+                </ScrollView>
               </View>
-
-              {/* Sanskrit Text */}
-              <Text style={styles.sanskritText}>{currentVerse.sanskrit}</Text>
-
-              {/* Translation */}
-              <View style={styles.translationContainer}>
-                <Text style={styles.translationLabel}>Translation</Text>
-                <Text style={styles.translationText}>{currentVerse.translation}</Text>
-              </View>
-            </>
-          )}
-        </Animated.View>
-
-        {/* Navigation Hints */}
-        {currentVerseIndex > 0 && (
-          <View style={styles.swipeHintLeft}>
-            <MaterialIcons name="chevron-left" size={32} color={Colors.textMuted} />
-          </View>
-        )}
-        {currentVerseIndex < verses.length - 1 && (
-          <View style={styles.swipeHintRight}>
-            <MaterialIcons name="chevron-right" size={32} color={Colors.textMuted} />
-          </View>
+            )}
+          />
         )}
       </View>
 
-      {/* Progress Bar */}
       <View style={styles.progressContainer}>
         <View style={styles.progressBar}>
           <View
@@ -260,73 +303,100 @@ export default function GitaReadingScreen() {
         </View>
       </View>
 
-      {/* AI Mini Overlay */}
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={[styles.aiContainer, { bottom: insets.bottom + 16 }]}
+        style={[
+          styles.aiContainer, 
+          { bottom: insets.bottom + 20, right: 20 },
+          aiExpanded && { left: 16, right: 16 }
+        ]}
       >
         <Animated.View
           style={[
             styles.aiOverlay,
             {
               height: aiHeightAnim,
+              width: aiWidthAnim,
               opacity: aiOpacityAnim,
-            }
+              borderRadius: aiExpanded ? BorderRadius.xl : 28,
+            },
           ]}
         >
-          {/* Mini Header - Always visible */}
-          <TouchableOpacity
-            style={styles.aiHeader}
+          <TouchableOpacity 
+            activeOpacity={0.9} 
             onPress={toggleAiOverlay}
-            activeOpacity={0.8}
+            style={[styles.aiHeader, !aiExpanded && styles.aiHeaderCollapsed]}
           >
-            <View style={styles.aiIconContainer}>
-              <MaterialIcons name="auto-awesome" size={16} color={Colors.primary} />
+            <View style={styles.aiTitleRow}>
+              <MaterialIcons name="lightbulb" size={aiExpanded ? 20 : 24} color={Colors.primary} />
+              {aiExpanded && <Text style={styles.aiTitle}>Guided Insight</Text>}
             </View>
-            <Text style={styles.aiHeaderText}>Guided Insight</Text>
-            <MaterialIcons
-              name={aiExpanded ? "expand-more" : "expand-less"}
-              size={20}
-              color={Colors.textMuted}
-            />
+            {aiExpanded && <MaterialIcons name="close" size={20} color={Colors.textMuted} />}
           </TouchableOpacity>
 
-          {/* Expanded Content */}
           {aiExpanded && (
             <View style={styles.aiExpandedContent}>
               <Text style={styles.aiContextText}>
                 Ask about Verse {currentVerse?.verseNumber}
               </Text>
 
-              <View style={styles.aiInputContainer}>
-                <TextInput
-                  style={styles.aiTextInput}
-                  placeholder="Ask Krishna..."
-                  placeholderTextColor={Colors.textMuted}
-                  value={inputText}
-                  onChangeText={setInputText}
-                  multiline={false}
-                />
-                <TouchableOpacity
-                  style={styles.aiSendButton}
-                  onPress={handleAskQuestion}
-                >
-                  <MaterialIcons name="send" size={16} color={Colors.backgroundDark} />
-                </TouchableOpacity>
-              </View>
+              {aiLoading ? (
+                <View style={styles.aiLoadingContainer}>
+                  <ActivityIndicator size="small" color={Colors.primary} />
+                  <Text style={styles.aiLoadingText}> Krishna is contemplating...</Text>
+                </View>
+              ) : aiResponse ? (
+                <ScrollView style={styles.aiResponseScroll} showsVerticalScrollIndicator={false}>
+                  <Text style={styles.aiResponseText}>{aiResponse}</Text>
+                  <TouchableOpacity 
+                    onPress={() => setAiResponse(null)} 
+                    style={styles.clearResponseButton}
+                  >
+                    <Text style={styles.clearResponseText}>Ask another question</Text>
+                  </TouchableOpacity>
+                </ScrollView>
+              ) : (
+                <View style={styles.aiInputWrapper}>
+                  <View style={styles.aiInputContainer}>
+                    <TextInput
+                      style={styles.aiTextInput}
+                      placeholder="Ask Krishna..."
+                      placeholderTextColor={Colors.textMuted}
+                      value={inputText}
+                      onChangeText={setInputText}
+                      multiline={false}
+                      onSubmitEditing={() => handleAskQuestion()}
+                    />
+                    <TouchableOpacity
+                      style={styles.aiSendButton}
+                      onPress={() => handleAskQuestion()}
+                    >
+                      <MaterialIcons name="send" size={16} color={Colors.backgroundDark} />
+                    </TouchableOpacity>
+                  </View>
 
-              {/* Quick Questions */}
-              <View style={styles.quickQuestionsContainer}>
-                <TouchableOpacity style={styles.quickQuestionChip}>
-                  <Text style={styles.quickQuestionText}>Explain meaning</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.quickQuestionChip}>
-                  <Text style={styles.quickQuestionText}>Modern context</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.quickQuestionChip}>
-                  <Text style={styles.quickQuestionText}>Sanskrit word</Text>
-                </TouchableOpacity>
-              </View>
+                  <View style={styles.quickQuestionsContainer}>
+                    <TouchableOpacity 
+                      style={styles.quickQuestionChip}
+                      onPress={() => handleAskQuestion('What is the deeper spiritual meaning of this verse?')}
+                    >
+                      <Text style={styles.quickQuestionText}>Meaning</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                      style={styles.quickQuestionChip}
+                      onPress={() => handleAskQuestion('How can I apply this verse to my modern daily life?')}
+                    >
+                      <Text style={styles.quickQuestionText}>Practical use</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                      style={styles.quickQuestionChip}
+                      onPress={() => handleAskQuestion('Explain the Sanskrit words in this verse.')}
+                    >
+                      <Text style={styles.quickQuestionText}>Sanskrit</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              )}
             </View>
           )}
         </Animated.View>
@@ -350,8 +420,6 @@ const styles = StyleSheet.create({
     color: Colors.textMuted,
     marginTop: 16,
   },
-
-  // Book Header
   bookHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -400,8 +468,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: Colors.primary,
   },
-
-  // Book Container
   bookContainer: {
     flex: 1,
     margin: 16,
@@ -428,33 +494,18 @@ const styles = StyleSheet.create({
     width: 4,
     backgroundColor: `${Colors.primary}1A`,
   },
-  pageContent: {
+  bookScroll: {
     flex: 1,
+  },
+  bookScrollContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
     padding: 24,
-    paddingTop: 32,
   },
-
-  // Swipe Hints
-  swipeHintLeft: {
-    position: 'absolute',
-    left: 8,
-    top: '50%',
-    transform: [{ translateY: -16 }],
-    opacity: 0.3,
-  },
-  swipeHintRight: {
-    position: 'absolute',
-    right: 8,
-    top: '50%',
-    transform: [{ translateY: -16 }],
-    opacity: 0.3,
-  },
-
-  // Verse Content
   verseNumberContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: 16,
   },
   verseNumber: {
     fontFamily: Typography.display.join(','),
@@ -472,38 +523,36 @@ const styles = StyleSheet.create({
   },
   sanskritText: {
     fontFamily: Typography.devanagari.join(','),
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: '600',
     color: Colors.textLight,
-    lineHeight: 36,
+    lineHeight: 32,
     textAlign: 'center',
-    marginBottom: 32,
+    marginBottom: 24,
   },
   translationContainer: {
-    backgroundColor: `${Colors.textLight}0A`,
+    backgroundColor: `${Colors.textLight}08`,
     borderRadius: BorderRadius.lg,
-    padding: 20,
+    padding: 16,
     borderLeftWidth: 3,
     borderLeftColor: Colors.primary,
   },
   translationLabel: {
     fontFamily: Typography.display.join(','),
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: '700',
     color: Colors.primary,
     letterSpacing: 1.5,
     textTransform: 'uppercase',
-    marginBottom: 8,
+    marginBottom: 6,
   },
   translationText: {
     fontFamily: Typography.display.join(','),
-    fontSize: 15,
+    fontSize: 14,
     color: Colors.textLight,
-    lineHeight: 24,
+    lineHeight: 22,
     fontStyle: 'italic',
   },
-
-  // Progress
   progressContainer: {
     paddingHorizontal: 16,
     paddingVertical: 12,
@@ -519,53 +568,55 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primary,
     borderRadius: BorderRadius.full,
   },
-
-  // AI Overlay
   aiContainer: {
     position: 'absolute',
-    left: 16,
-    right: 16,
+    zIndex: 100,
   },
   aiOverlay: {
     backgroundColor: Colors.charcoal,
-    borderRadius: BorderRadius.xl,
     borderWidth: 1,
     borderColor: Colors.borderLight,
     overflow: 'hidden',
-    ...Shadow.md,
+    ...Shadow.lg,
   },
   aiHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    height: 60,
+    height: 56,
   },
-  aiIconContainer: {
-    width: 32,
-    height: 32,
-    borderRadius: BorderRadius.full,
-    backgroundColor: `${Colors.primary}1A`,
-    alignItems: 'center',
+  aiHeaderCollapsed: {
     justifyContent: 'center',
+    paddingHorizontal: 0,
+    width: 56,
   },
-  aiHeaderText: {
-    fontFamily: Typography.display.join(','),
-    fontSize: 14,
-    fontWeight: '600',
+  aiTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  aiTitle: {
+    fontFamily: Typography.serif.join(','),
+    fontSize: 18,
+    fontWeight: '700',
     color: Colors.textLight,
-    flex: 1,
-    marginLeft: 12,
   },
   aiExpandedContent: {
+    flex: 1,
     paddingHorizontal: 16,
-    paddingBottom: 16,
+    paddingBottom: 20,
   },
   aiContextText: {
     fontFamily: Typography.display.join(','),
     fontSize: 12,
-    color: Colors.textMuted,
-    marginBottom: 12,
+    color: Colors.primary,
+    marginBottom: 16,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  aiInputWrapper: {
+    gap: 12,
   },
   aiInputContainer: {
     flexDirection: 'row',
@@ -608,5 +659,57 @@ const styles = StyleSheet.create({
     fontFamily: Typography.display.join(','),
     fontSize: 12,
     color: Colors.primary,
+  },
+  aiLoadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 20,
+  },
+  aiLoadingText: {
+    color: Colors.textMuted,
+    fontSize: 14,
+    fontStyle: 'italic',
+  },
+  aiResponseScroll: {
+    maxHeight: 180,
+  },
+  aiResponseText: {
+    color: Colors.textLight,
+    fontSize: 14,
+    lineHeight: 22,
+    fontFamily: Typography.display.join(','),
+  },
+  clearResponseButton: {
+    marginTop: 12,
+    alignSelf: 'flex-start',
+  },
+  clearResponseText: {
+    color: Colors.primary,
+    fontSize: 12,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+  },
+  versePage: {
+    width: SCREEN_WIDTH - 32,
+    flex: 1,
+  },
+  navButton: {
+    position: 'absolute',
+    top: '50%',
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: -22,
+    zIndex: 10,
+  },
+  navButtonLeft: {
+    left: 10,
+  },
+  navButtonRight: {
+    right: 10,
   },
 });

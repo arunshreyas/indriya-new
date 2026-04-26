@@ -73,27 +73,24 @@ export class OpenRouterService {
       
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('API error response:', errorText);
-        throw new Error(`API error: ${response.status} - ${errorText}`);
+        if (response.status === 401) {
+          console.log('OpenRouter API: Invalid or expired key. Using fallback wisdom.');
+        } else {
+          console.error(`OpenRouter API error: ${response.status} - ${errorText}`);
+        }
+        return this.getFallbackResponse(messages[messages.length - 1]?.content || '');
       }
 
       const data = await response.json();
-      console.log('API response data:', JSON.stringify(data, null, 2));
-      
       const content = data.choices?.[0]?.message?.content;
-      console.log('Content extracted:', content);
       
       if (content) {
-        console.log('Generated response:', content);
         return content;
       } else {
-        console.error('No content in response');
-        console.log('Available keys:', Object.keys(data));
-        console.log('Choices:', data.choices);
         return this.getFallbackResponse(messages[messages.length - 1]?.content || '');
       }
     } catch (error) {
-      console.error('OpenRouter API error:', error);
+      console.log('OpenRouter: Service temporarily unavailable, providing fallback guidance.');
       return this.getFallbackResponse(messages[messages.length - 1]?.content || '');
     }
   }

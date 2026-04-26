@@ -56,6 +56,7 @@ function AppStack() {
         <Stack.Screen name="gita-reading" options={{ headerShown: false }} />
         <Stack.Screen name="evening-reflection" options={{ headerShown: false }} />
         <Stack.Screen name="settings" options={{ headerShown: false }} />
+        <Stack.Screen name="wisdom-chapters" options={{ headerShown: false }} />
         <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
       </Stack>
       <StatusBar style="light" />

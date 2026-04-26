@@ -43,6 +43,19 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="practice"
+        options={{
+          title: 'Practice',
+          tabBarIcon: ({ color, focused }) => (
+            <MaterialIcons 
+              name="self-improvement" 
+              size={24} 
+              color={focused ? Colors.primary : Colors.textMuted}
+            />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="wisdom"
         options={{
           title: 'Wisdom',

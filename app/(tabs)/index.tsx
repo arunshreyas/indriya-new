@@ -6,353 +6,279 @@ import {
   TouchableOpacity,
   ScrollView,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { MaterialIcons } from '@expo/vector-icons';
-import { router } from 'expo-router';
-import { Colors, Typography, BorderRadius, Shadow } from '@/constants/theme';
-import { UserStorage } from '@/utils/userStorage';
+import { useRouter } from 'expo-router';
+import { useAuth, useUser } from '@clerk/clerk-expo';
+import { MaterialIcons, Ionicons } from '@expo/vector-icons';
+import { Colors, Typography, Spacing, Shadow, BorderRadius } from '@/constants/theme';
+import Card from '@/components/Card';
+import ScreenWrapper from '@/components/ScreenWrapper';
+import { indriyaApi, ApiReflection } from '@/services/indriyaApi';
+
+const FALLBACK_WISDOM = {
+  source: 'Bhagavad Gita 2.47',
+  preview: 'Your right is to perform your duty only, but never to its fruits.',
+};
+
+const getTimeBasedGreeting = () => {
+  const hour = new Date().getHours();
+  if (hour < 12) return 'Suprabhatam';
+  if (hour < 17) return 'Namaste';
+  return 'Shubh Sandhya';
+};
 
 export default function HomeScreen() {
-  const insets = useSafeAreaInsets();
-  const [intention, setIntention] = React.useState('Develop discipline and reduce distractions');
-
-  const loadUserData = React.useCallback(async () => {
-    const data = await UserStorage.getUserData();
-    if (data.intention) {
-      setIntention(data.intention);
-    }
-  }, []);
+  const router = useRouter();
+  const { user } = useUser();
+  const { getToken } = useAuth();
+  const [reflectionSnippet, setReflectionSnippet] = React.useState<string | null>(null);
+  const [morningCompleted, setMorningCompleted] = React.useState(false);
 
   React.useEffect(() => {
-    loadUserData();
-  }, [loadUserData]);
+    const loadReflection = async () => {
+      try {
+        const reflections = await indriyaApi.getReflections(getToken);
+        if (reflections && reflections.length > 0) {
+          // Get the most recent reflection
+          const latest = reflections[0];
+          setReflectionSnippet(latest.content.slice(0, 100));
+        }
+      } catch (error) {
+        console.error('Failed to load reflections for dashboard:', error);
+      }
+    };
+
+    loadReflection();
+  }, [getToken]);
+
+  const userDisplayName = user?.firstName || user?.username || 'Seeker';
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <ScreenWrapper style={styles.container}>
       <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
       >
-        {/* Header */}
         <View style={styles.header}>
-          <View style={styles.headerTop}>
-            <View>
-              <Text style={styles.greeting}>Welcome back</Text>
-              <Text style={styles.subtext}>Return with steadiness</Text>
-            </View>
-            <TouchableOpacity 
-              onPress={() => router.push('/settings')}
-              style={styles.settingsButton}
-            >
-              <MaterialIcons name="settings" size={28} color={Colors.textMuted} />
-            </TouchableOpacity>
+          <View>
+            <Text style={styles.greeting}>{getTimeBasedGreeting()}, {userDisplayName}.</Text>
+            <Text style={styles.date}>Daily Sadhana</Text>
           </View>
-        </View>
-
-        {/* Daily Direction */}
-        <View style={styles.directionCard}>
-          <View style={styles.directionTopRow}>
-            <Text style={styles.eyebrow}>Today</Text>
-            <MaterialIcons name="wb-sunny" size={18} color={Colors.primary} />
-          </View>
-          <Text style={styles.directionTitle}>Act from clarity, not impulse.</Text>
-          <Text style={styles.directionText}>
-            Pause before reacting. Let your next action come from dharma, not restlessness.
-          </Text>
-        </View>
-
-        {/* Intention */}
-        <View style={styles.intentionPanel}>
-          <Text style={styles.panelLabel}>Long-term Intention</Text>
-          <Text style={styles.intentionText}>{intention}</Text>
-        </View>
-
-        {/* Main Guidance */}
-        <View style={styles.primaryActions}>
-          <TouchableOpacity
-            style={styles.primaryAction}
-            onPress={() => router.push('/dharma')}
-            activeOpacity={0.82}
+          <TouchableOpacity 
+            onPress={() => router.push('/settings')}
+            style={styles.profileIcon}
           >
-            <View style={styles.primaryActionIcon}>
+            <Ionicons name="person-circle-outline" size={32} color={Colors.primary} />
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.content}>
+          <Card
+            title="Today's Wisdom"
+            onPress={() => router.push('/wisdom')}
+            style={styles.wisdomCard}
+          >
+            <Text style={styles.wisdomText}>&quot;{FALLBACK_WISDOM.preview}&quot;</Text>
+            <Text style={styles.wisdomSource}>- {FALLBACK_WISDOM.source}</Text>
+            <View style={styles.cardFooter}>
+              <Text style={styles.linkText}>Read more</Text>
+              <Ionicons name="arrow-forward" size={16} color={Colors.primary} />
+            </View>
+          </Card>
+
+          <Card title="Today's Practice" onPress={() => router.push('/morning-ritual')}>
+            <View style={styles.practiceItem}>
+              <View style={styles.practiceIcon}>
+                <Ionicons name="sunny-outline" size={24} color={Colors.backgroundDark} />
+              </View>
+              <View style={styles.practiceInfo}>
+                <Text style={styles.practiceTitle}>Morning Ritual - 10 min</Text>
+                <Text style={styles.practiceStatus}>
+                  {morningCompleted ? 'Completed for today' : 'Continue your daily discipline'}
+                </Text>
+              </View>
+              <Ionicons
+                name={morningCompleted ? 'checkmark-circle' : 'chevron-forward'}
+                size={24}
+                color={morningCompleted ? Colors.success : Colors.textMuted}
+              />
+            </View>
+          </Card>
+
+          <Card title="Reflection" onPress={() => router.push('/reflection')}>
+            <Text style={styles.reflectionPreview}>
+              {reflectionSnippet || 'Close the day with awareness and journal what you learned.'}
+            </Text>
+            <TouchableOpacity 
+              style={styles.reflectionAction}
+              onPress={() => router.push('/reflection')}
+            >
+              <Text style={styles.reflectionActionText}>
+                {reflectionSnippet ? 'EDIT REFLECTION' : 'ADD NOTE'}
+              </Text>
+              <MaterialIcons name="edit-note" size={18} color={Colors.primary} />
+            </TouchableOpacity>
+          </Card>
+
+          {/* Ask for guidance shortcut */}
+          <TouchableOpacity
+            style={styles.guidanceButton}
+            onPress={() => router.push('/dharma')}
+            activeOpacity={0.8}
+          >
+            <View style={styles.guidanceIcon}>
               <MaterialIcons name="lightbulb" size={24} color={Colors.backgroundDark} />
             </View>
-            <View style={styles.primaryActionContent}>
-              <Text style={styles.primaryActionTitle}>Ask for guidance</Text>
-              <Text style={styles.primaryActionSubtitle}>Bring a situation to Dharma</Text>
+            <View style={styles.guidanceContent}>
+              <Text style={styles.guidanceTitle}>Seek Guidance</Text>
+              <Text style={styles.guidanceSubtitle}>Bring a situation to Dharma</Text>
             </View>
-            <MaterialIcons name="arrow-forward" size={20} color={Colors.backgroundDark} />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.secondaryAction}
-            onPress={() => router.push('/morning-ritual')}
-            activeOpacity={0.82}
-          >
-            <MaterialIcons name="self-improvement" size={22} color={Colors.primary} />
-            <Text style={styles.secondaryActionText}>Begin morning practice</Text>
+            <MaterialIcons name="chevron-right" size={24} color={Colors.backgroundDark} />
           </TouchableOpacity>
         </View>
-
-        {/* Reflection Prompt */}
-        <View style={styles.promptPanel}>
-          <Text style={styles.panelLabel}>Reflection Prompt</Text>
-          <Text style={styles.promptText}>Where did your mind pull you today?</Text>
-          <TouchableOpacity
-            style={styles.promptButton}
-            onPress={() => router.push('/reflection')}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.promptButtonText}>Write reflection</Text>
-            <MaterialIcons name="edit-note" size={18} color={Colors.primary} />
-          </TouchableOpacity>
-        </View>
-
-        {/* Library */}
-        <View style={styles.sectionsContainer}>
-          <TouchableOpacity
-            style={styles.sectionCard}
-            onPress={() => router.push('/wisdom')}
-            activeOpacity={0.8}
-          >
-            <View style={styles.sectionIcon}>
-              <MaterialIcons name="menu-book" size={24} color={Colors.primary} />
-            </View>
-            <View style={styles.sectionContent}>
-              <Text style={styles.sectionTitle}>Wisdom</Text>
-              <Text style={styles.sectionSubtitle}>Read the Bhagavad Gita</Text>
-            </View>
-            <MaterialIcons name="chevron-right" size={20} color={Colors.textMuted} />
-          </TouchableOpacity>
-        </View>
-
-        {/* Bottom padding */}
-        <View style={styles.bottomPadding} />
       </ScrollView>
-    </View>
+    </ScreenWrapper>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0E0E0E',
-  },
-  scrollView: {
-    flex: 1,
   },
   scrollContent: {
-    paddingHorizontal: 24,
-    paddingBottom: 32,
+    padding: 24,
+    paddingBottom: 40,
   },
   header: {
-    paddingTop: 32,
-    paddingBottom: 28,
-  },
-  headerTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    width: '100%',
-  },
-  settingsButton: {
-    padding: 8,
-    marginRight: -8,
+    marginBottom: 32,
+    marginTop: 8,
   },
   greeting: {
-    fontFamily: Typography.display.join(','),
-    fontSize: 30,
-    fontWeight: '500',
-    color: '#EAEAEA',
-    marginBottom: 8,
-  },
-  subtext: {
-    fontFamily: Typography.display.join(','),
-    fontSize: 16,
-    fontWeight: '400',
-    color: '#EAEAEA80',
-  },
-  directionCard: {
-    backgroundColor: '#C6A75E1A',
-    borderWidth: 1,
-    borderColor: '#C6A75E33',
-    borderRadius: BorderRadius.xl,
-    padding: 24,
-    marginBottom: 20,
-    ...Shadow.primary,
-  },
-  directionTopRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  eyebrow: {
-    fontFamily: Typography.display.join(','),
-    fontSize: 12,
+    fontSize: 26,
     fontWeight: '700',
-    color: Colors.primary,
-    letterSpacing: 1.5,
-    textTransform: 'uppercase',
-  },
-  directionTitle: {
+    color: Colors.textLight,
     fontFamily: Typography.serif.join(','),
-    fontSize: 28,
-    fontWeight: '700',
-    color: '#EAEAEA',
-    lineHeight: 36,
-    marginBottom: 12,
   },
-  directionText: {
-    fontFamily: Typography.display.join(','),
-    fontSize: 15,
-    color: '#EAEAEAB3',
-    lineHeight: 23,
-  },
-  intentionPanel: {
-    backgroundColor: '#1A1A1A',
-    borderWidth: 1,
-    borderColor: '#2A2A2A',
-    borderRadius: BorderRadius.xl,
-    padding: 20,
-    marginBottom: 16,
-  },
-  panelLabel: {
-    fontFamily: Typography.display.join(','),
-    fontSize: 12,
-    fontWeight: '700',
-    color: Colors.primary,
-    letterSpacing: 1.5,
+  date: {
+    fontSize: 14,
+    color: Colors.textMuted,
+    marginTop: 4,
     textTransform: 'uppercase',
-    marginBottom: 10,
+    letterSpacing: 1.5,
+    fontFamily: Typography.display.join(','),
   },
-  intentionText: {
-    fontFamily: Typography.serif.join(','),
+  profileIcon: {
+    padding: 4,
+  },
+  content: {
+    gap: 16,
+  },
+  wisdomCard: {
+    borderColor: Colors.primary,
+    borderWidth: 0.5,
+  },
+  wisdomText: {
     fontSize: 19,
-    fontWeight: '400',
-    color: '#EAEAEA',
-    lineHeight: 27,
+    fontStyle: 'italic',
+    color: Colors.textLight,
+    fontFamily: Typography.serif.join(','),
+    marginBottom: 8,
+    lineHeight: 28,
   },
-  primaryActions: {
-    gap: 12,
-    marginBottom: 16,
+  wisdomSource: {
+    fontSize: 14,
+    color: Colors.primary,
+    textAlign: 'right',
+    marginBottom: 12,
+    fontWeight: '600',
   },
-  primaryAction: {
+  cardFooter: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    gap: 4,
+  },
+  linkText: {
+    color: Colors.primary,
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  practiceItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 14,
+  },
+  practiceIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: Colors.primary,
-    borderRadius: BorderRadius.xl,
-    padding: 18,
-    ...Shadow.primary,
-  },
-  primaryActionIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: BorderRadius.full,
-    backgroundColor: '#0E0E0E1A',
-    alignItems: 'center',
     justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
   },
-  primaryActionContent: {
+  practiceInfo: {
     flex: 1,
   },
-  primaryActionTitle: {
-    fontFamily: Typography.display.join(','),
-    fontSize: 18,
+  practiceTitle: {
+    color: Colors.textLight,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  practiceStatus: {
+    color: Colors.textMuted,
+    fontSize: 12,
+    marginTop: 2,
+  },
+  reflectionPreview: {
+    color: Colors.textMuted,
+    fontStyle: 'italic',
+    lineHeight: 20,
+    fontSize: 14,
+  },
+  reflectionAction: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 12,
+    gap: 6,
+  },
+  reflectionActionText: {
+    color: Colors.primary,
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 1,
+  },
+  guidanceButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.primary,
+    borderRadius: 16,
+    padding: 16,
+    marginTop: 8,
+    ...Shadow.primary,
+  },
+  guidanceIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(0,0,0,0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 16,
+  },
+  guidanceContent: {
+    flex: 1,
+  },
+  guidanceTitle: {
+    fontSize: 17,
     fontWeight: '700',
     color: Colors.backgroundDark,
-    marginBottom: 3,
   },
-  primaryActionSubtitle: {
-    fontFamily: Typography.display.join(','),
+  guidanceSubtitle: {
     fontSize: 13,
+    color: 'rgba(0,0,0,0.6)',
     fontWeight: '500',
-    color: '#0E0E0EA6',
-  },
-  secondaryAction: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    backgroundColor: '#1A1A1A',
-    borderWidth: 1,
-    borderColor: '#2A2A2A',
-    borderRadius: BorderRadius.xl,
-    padding: 18,
-  },
-  secondaryActionText: {
-    fontFamily: Typography.display.join(','),
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#EAEAEA',
-  },
-  promptPanel: {
-    backgroundColor: '#1A1A1A',
-    borderWidth: 1,
-    borderColor: '#2A2A2A',
-    borderRadius: BorderRadius.xl,
-    padding: 20,
-    marginBottom: 16,
-  },
-  promptText: {
-    fontFamily: Typography.display.join(','),
-    fontSize: 17,
-    color: '#EAEAEA',
-    lineHeight: 25,
-    marginBottom: 16,
-  },
-  promptButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    gap: 8,
-    paddingVertical: 10,
-  },
-  promptButtonText: {
-    fontFamily: Typography.display.join(','),
-    fontSize: 14,
-    fontWeight: '700',
-    color: Colors.primary,
-  },
-  sectionsContainer: {
-    gap: 16,
-  },
-  sectionCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#1A1A1A',
-    borderWidth: 1,
-    borderColor: '#2A2A2A',
-    borderRadius: BorderRadius.lg,
-    padding: 20,
-    gap: 16,
-  },
-  sectionIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: BorderRadius.lg,
-    backgroundColor: '#C6A75E1A',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  sectionContent: {
-    flex: 1,
-  },
-  sectionTitle: {
-    fontFamily: Typography.display.join(','),
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#EAEAEA',
-    marginBottom: 4,
-  },
-  sectionSubtitle: {
-    fontFamily: Typography.display.join(','),
-    fontSize: 14,
-    fontWeight: '400',
-    color: '#EAEAEA80',
-  },
-  bottomPadding: {
-    height: 32,
   },
 });
+
