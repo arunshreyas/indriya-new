@@ -85,7 +85,7 @@ export default function EveningReflectionScreen() {
           <Text style={styles.title}>Contemplative Silence</Text>
           <Text style={styles.subtitle}>Mauna</Text>
           <Text style={styles.description}>
-            In the quiet space between today's activities and tomorrow's possibilities, 
+            In the quiet space between {"today's"} activities and {"tomorrow's"} possibilities, 
             find clarity in stillness.
           </Text>
         </View>

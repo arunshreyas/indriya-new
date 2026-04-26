@@ -44,11 +44,7 @@ export default function GitaReadingScreen() {
   const aiHeightAnim = React.useRef(new Animated.Value(60)).current;
   const aiOpacityAnim = React.useRef(new Animated.Value(0.7)).current;
 
-  React.useEffect(() => {
-    loadChapterData();
-  }, [chapterNumber]);
-
-  const loadChapterData = async () => {
+  const loadChapterData = React.useCallback(async () => {
     try {
       setLoading(true);
       const [chapterData, versesData] = await Promise.all([
@@ -78,7 +74,11 @@ export default function GitaReadingScreen() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [chapterNumber]);
+
+  React.useEffect(() => {
+    loadChapterData();
+  }, [loadChapterData]);
 
   // Swipe gesture handler
   const panResponder = React.useRef(

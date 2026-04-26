@@ -117,7 +117,7 @@ export default function SettingsScreen() {
           <View style={styles.sectionContent}>
             <View style={styles.privacyContent}>
               <Text style={styles.privacyQuote}>
-                "No ads. No tracking. Minimal data storage."
+                {'"No ads. No tracking. Minimal data storage."'}
               </Text>
               <Text style={styles.privacyDescription}>
                 Your practice is sacred. We believe sensory mastery requires digital peace. 

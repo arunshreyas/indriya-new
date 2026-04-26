@@ -5,6 +5,7 @@ const USER_STORAGE_KEY = '@indriya_user_data';
 export interface UserData {
   intention: string;
   onboarded: boolean;
+  lastPracticeDate?: string;
 }
 
 const DEFAULT_USER_DATA: UserData = {

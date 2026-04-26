@@ -1,16 +1,16 @@
 import { BorderRadius, Colors, Shadow, Typography } from '@/constants/theme';
+import { UserStorage } from '@/utils/userStorage';
 import { MaterialIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
-import { Dimensions, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
-const { width } = Dimensions.get('window');
 
 interface IntentionOption {
   id: string;
   title: string;
   description: string;
+  intention: string;
 }
 
 const intentionOptions: IntentionOption[] = [
@@ -18,16 +18,19 @@ const intentionOptions: IntentionOption[] = [
     id: 'discipline',
     title: 'Discipline',
     description: 'Consistency and rigor',
+    intention: 'Develop discipline and reduce distractions',
   },
   {
     id: 'calm',
     title: 'Calm',
     description: 'Stillness and sensory withdrawal',
+    intention: 'Cultivate calm and return to stillness',
   },
   {
     id: 'self-control',
     title: 'Self-control',
     description: 'Mastery over impulses',
+    intention: 'Practice self-control over impulses',
   },
 ];
 
@@ -35,8 +38,12 @@ export default function OnboardingScreen() {
   const [selectedIntention, setSelectedIntention] = useState('discipline');
   const insets = useSafeAreaInsets();
 
-  const handleBeginPractice = () => {
-    // TODO: Save intention to user profile
+  const handleBeginPractice = async () => {
+    const selected = intentionOptions.find((option) => option.id === selectedIntention);
+    await UserStorage.saveUserData({
+      intention: selected?.intention ?? intentionOptions[0].intention,
+      onboarded: true,
+    });
     router.replace('/(tabs)');
   };
 

@@ -8,22 +8,32 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
+import { router } from 'expo-router';
 import { Colors, Typography, BorderRadius, Shadow } from '@/constants/theme';
 import { UserStorage } from '@/utils/userStorage';
+
+const getTodayKey = () => new Date().toISOString().slice(0, 10);
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const [intention, setIntention] = React.useState('Develop discipline and reduce distractions');
+  const [practicedToday, setPracticedToday] = React.useState(false);
 
-  React.useEffect(() => {
-    loadUserData();
-  }, []);
-
-  const loadUserData = async () => {
+  const loadUserData = React.useCallback(async () => {
     const data = await UserStorage.getUserData();
     if (data.intention) {
       setIntention(data.intention);
     }
+    setPracticedToday(data.lastPracticeDate === getTodayKey());
+  }, []);
+
+  React.useEffect(() => {
+    loadUserData();
+  }, [loadUserData]);
+
+  const markPracticed = async () => {
+    await UserStorage.saveUserData({ lastPracticeDate: getTodayKey() });
+    setPracticedToday(true);
   };
 
   return (
@@ -48,18 +58,28 @@ export default function HomeScreen() {
 
         {/* Today's Focus Card */}
         <View style={styles.focusCard}>
-          <Text style={styles.focusTitle}>Today's Focus</Text>
+          <Text style={styles.focusTitle}>{"Today's Focus"}</Text>
           <Text style={styles.focusText}>Remain mindful of impulses</Text>
-          <TouchableOpacity style={styles.actionButton} activeOpacity={0.8}>
+          <TouchableOpacity
+            style={[styles.actionButton, practicedToday && styles.actionButtonComplete]}
+            onPress={markPracticed}
+            activeOpacity={0.8}
+          >
             <MaterialIcons name="check" size={20} color={Colors.backgroundDark} />
-            <Text style={styles.actionButtonText}>Mark as Practiced</Text>
+            <Text style={styles.actionButtonText}>
+              {practicedToday ? 'Practiced Today' : 'Mark as Practiced'}
+            </Text>
           </TouchableOpacity>
         </View>
 
         {/* Main Sections */}
         <View style={styles.sectionsContainer}>
           {/* Wisdom Card */}
-          <TouchableOpacity style={styles.sectionCard} activeOpacity={0.8}>
+          <TouchableOpacity
+            style={styles.sectionCard}
+            onPress={() => router.push('/wisdom')}
+            activeOpacity={0.8}
+          >
             <View style={styles.sectionIcon}>
               <MaterialIcons name="menu-book" size={24} color={Colors.primary} />
             </View>
@@ -71,7 +91,11 @@ export default function HomeScreen() {
           </TouchableOpacity>
 
           {/* Dharma Card */}
-          <TouchableOpacity style={styles.sectionCard} activeOpacity={0.8}>
+          <TouchableOpacity
+            style={styles.sectionCard}
+            onPress={() => router.push('/dharma')}
+            activeOpacity={0.8}
+          >
             <View style={styles.sectionIcon}>
               <MaterialIcons name="lightbulb" size={24} color={Colors.primary} />
             </View>
@@ -83,7 +107,11 @@ export default function HomeScreen() {
           </TouchableOpacity>
 
           {/* Reflection Card */}
-          <TouchableOpacity style={styles.sectionCard} activeOpacity={0.8}>
+          <TouchableOpacity
+            style={styles.sectionCard}
+            onPress={() => router.push('/reflection')}
+            activeOpacity={0.8}
+          >
             <View style={styles.sectionIcon}>
               <MaterialIcons name="edit-note" size={24} color={Colors.primary} />
             </View>
@@ -207,6 +235,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 32,
     minWidth: 200,
     ...Shadow.primary,
+  },
+  actionButtonComplete: {
+    opacity: 0.72,
   },
   actionButtonText: {
     fontFamily: Typography.display.join(','),

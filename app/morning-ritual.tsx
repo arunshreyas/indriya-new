@@ -37,7 +37,7 @@ export default function MorningRitualScreen() {
             ॐ पूर्णमदः पूर्णमिदं
           </Text>
           <Text style={styles.translationText}>
-            "That is whole; this is whole. From wholeness, wholeness comes."
+            {'"That is whole; this is whole. From wholeness, wholeness comes."'}
           </Text>
         </View>
 
