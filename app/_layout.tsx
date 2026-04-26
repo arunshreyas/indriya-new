@@ -53,6 +53,8 @@ function AppStack() {
           options={{ headerShown: false }}
         />
         <Stack.Screen name="morning-ritual" options={{ headerShown: false }} />
+        <Stack.Screen name="focus-training" options={{ headerShown: false }} />
+        <Stack.Screen name="deep-work" options={{ headerShown: false }} />
         <Stack.Screen name="gita-reading" options={{ headerShown: false }} />
         <Stack.Screen name="evening-reflection" options={{ headerShown: false }} />
         <Stack.Screen name="settings" options={{ headerShown: false }} />

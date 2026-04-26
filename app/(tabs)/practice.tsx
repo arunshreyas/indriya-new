@@ -45,7 +45,7 @@ const PRACTICES: PracticeItem[] = [
     title: 'Evening Reflection',
     subtitle: 'Close the day with awareness',
     duration: '10 min',
-    route: '/reflection',
+    route: '/evening-reflection',
     icon: 'moon-outline',
   },
 ];
