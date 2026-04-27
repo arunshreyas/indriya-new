@@ -1,10 +1,10 @@
+import { indriyaApi } from '@/services/indriyaApi';
 import { ClerkProvider, useAuth } from '@clerk/clerk-expo';
 import { router, Stack } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
 import { StatusBar } from 'expo-status-bar';
 import React from 'react';
 import { View } from 'react-native';
-import { indriyaApi } from '@/services/indriyaApi';
 
 const clerkPublishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY;
 
@@ -32,6 +32,27 @@ function EnsureApiUser() {
 
   return null;
 }
+
+// function NotificationSetup() {
+//   React.useEffect(() => {
+//     const initNotifications = async () => {
+//       try {
+//         const hasPermission = await setupNotifications();
+//         if (hasPermission) {
+//           await scheduleDailyNotifications();
+//         } else {
+//           console.log('Notification permission denied');
+//         }
+//       } catch (error: any) {
+//         console.error('Failed to setup notifications:', error);
+//       }
+//     };
+
+//     initNotifications();
+//   }, []);
+
+//   return null;
+// }
 
 function AppStack() {
   const { isLoaded, isSignedIn } = useAuth();

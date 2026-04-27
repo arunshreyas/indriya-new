@@ -2,18 +2,124 @@ import { BorderRadius, Colors, Shadow, Typography } from '@/constants/theme';
 import { indriyaApi } from '@/services/indriyaApi';
 import { useAuth } from '@clerk/clerk-expo';
 import { MaterialIcons } from '@expo/vector-icons';
+import { Audio } from 'expo-av';
 import { router } from 'expo-router';
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function MorningRitualScreen() {
   const insets = useSafeAreaInsets();
   const { getToken, isSignedIn } = useAuth();
-  const [isPlaying, setIsPlaying] = React.useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [sound, setSound] = useState<Audio.Sound | null>(null);
+  const [audioPermission, setAudioPermission] = useState<boolean | null>(null);
 
-  const handlePlayAudio = () => {
-    setIsPlaying(!isPlaying);
+  useEffect(() => {
+    const setupAudio = async () => {
+      try {
+        console.log('Setting up audio permissions...');
+        const { status } = await Audio.requestPermissionsAsync();
+        setAudioPermission(status === 'granted');
+        console.log('Audio permission status:', status);
+        
+        await Audio.setAudioModeAsync({
+          allowsRecordingIOS: false,
+          staysActiveInBackground: false,
+          playsInSilentModeIOS: true,
+          shouldDuckAndroid: true,
+          playThroughEarpieceAndroid: false,
+        });
+        console.log('Audio mode set');
+      } catch (error) {
+        console.error('Audio setup error:', error);
+        setAudioPermission(false);
+      }
+    };
+
+    setupAudio();
+  }, []);
+
+  useEffect(() => {
+    return sound
+      ? () => {
+          sound.unloadAsync();
+        }
+      : undefined;
+  }, [sound]);
+
+  const handlePlayAudio = async () => {
+    try {
+      console.log('Audio button pressed, isPlaying:', isPlaying, 'permission:', audioPermission);
+      
+      // Check audio permission first
+      if (audioPermission === false) {
+        console.log('Audio permission denied, requesting again...');
+        const { status } = await Audio.requestPermissionsAsync();
+        setAudioPermission(status === 'granted');
+        if (status !== 'granted') {
+          console.log('Audio permission still denied');
+          return;
+        }
+      }
+      
+      if (audioPermission === null) {
+        console.log('Audio permission not yet set, waiting...');
+        return;
+      }
+      
+      if (isPlaying && sound) {
+        console.log('Pausing audio');
+        await sound.pauseAsync();
+        setIsPlaying(false);
+        return;
+      }
+
+      if (sound) {
+        console.log('Resuming audio');
+        await sound.playAsync();
+        setIsPlaying(true);
+        return;
+      }
+
+      console.log('Loading new audio file...');
+      // Fix the require path - it should be relative to the current file
+      const { sound: newSound } = await Audio.Sound.createAsync(
+        require('@/assets/images/audio/kalsstockmedia-free-soul-4-minutes-om-chants-in-soothing-voice-452177.mp3'),
+        { 
+          shouldPlay: true,
+          volume: 1.0,
+        }
+      );
+      
+      console.log('Audio loaded successfully');
+      
+      newSound.setOnPlaybackStatusUpdate((status) => {
+        if (status.isLoaded && status.didJustFinish) {
+          console.log('Audio finished playing');
+          setIsPlaying(false);
+        }
+      });
+
+      setSound(newSound);
+      setIsPlaying(true);
+      console.log('Audio started playing');
+    } catch (error) {
+      console.error('Error playing audio:', error);
+      // Try a fallback approach - create a simple beep sound
+      try {
+        console.log('Trying fallback audio...');
+        const { sound: fallbackSound } = await Audio.Sound.createAsync(
+          { uri: 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSuBzvLZiTYIG2m98OScTgwOUarm7blmGgU7k9n1unEiBC13yO/eizEIHWq+8+OWT' },
+          { shouldPlay: true }
+        );
+        setSound(fallbackSound);
+        setIsPlaying(true);
+        console.log('Fallback audio playing');
+      } catch (fallbackError) {
+        console.error('Fallback audio also failed:', fallbackError);
+      }
+    }
   };
 
   const handleCompleteRitual = async () => {
@@ -154,10 +260,10 @@ const styles = StyleSheet.create({
   },
   mantraText: {
     fontFamily: Typography.devanagari.join(','),
-    fontSize: 60,
+    fontSize: 40,
     fontWeight: '700',
     color: Colors.textLight,
-    lineHeight: 72,
+    lineHeight: 50,
     textAlign: 'center',
   },
   translationText: {

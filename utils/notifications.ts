@@ -12,13 +12,29 @@ Notifications.setNotificationHandler({
   }),
 });
 
+async function setupNotificationSound() {
+  try {
+    // For now, use system default sound
+    // In a production app, you would:
+    // 1. Add an audio file to assets/
+    // 2. Copy it to device storage
+    // 3. Reference the local file path
+    console.log('Using system notification sound');
+  } catch (error) {
+    console.error('Failed to setup notification sound:', error);
+  }
+}
+
 export async function setupNotifications() {
+  await setupNotificationSound();
+  
   if (Platform.OS === 'android') {
     await Notifications.setNotificationChannelAsync('indriya-daily', {
       name: 'Indriya Daily Reminders',
       importance: Notifications.AndroidImportance.DEFAULT,
       vibrationPattern: [0, 250, 250, 250],
       lightColor: '#f4c32f',
+      sound: 'default', // Use system default sound
     });
   }
 
@@ -43,7 +59,7 @@ export async function scheduleDailyNotifications() {
     content: {
       title: 'Good Morning',
       body: 'Begin your day with focus. What is your practice today?',
-      sound: true,
+      sound: 'default', // Use system default sound
     },
     trigger: {
       type: Notifications.SchedulableTriggerInputTypes.DAILY,
@@ -58,7 +74,7 @@ export async function scheduleDailyNotifications() {
     content: {
       title: 'Evening Reflection',
       body: 'Take a moment to reflect on your day. What did you learn?',
-      sound: true,
+      sound: 'default', // Use system default sound
     },
     trigger: {
       type: Notifications.SchedulableTriggerInputTypes.DAILY,
@@ -81,7 +97,7 @@ export async function sendPracticeCompleteNotification() {
     content: {
       title: 'Practice Complete',
       body: 'Well done. Each mindful moment builds the path.',
-      sound: true,
+      sound: 'default', // Use system default sound
     },
     trigger: null, // Show immediately
   });

@@ -5,7 +5,7 @@ import { useAuth } from '@clerk/clerk-expo';
 import { MaterialIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View, ScrollView, TextInput } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface IntentionOption {
@@ -38,6 +38,7 @@ const intentionOptions: IntentionOption[] = [
 
 export default function OnboardingScreen() {
   const [selectedIntention, setSelectedIntention] = useState('discipline');
+  const [struggle, setStruggle] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const insets = useSafeAreaInsets();
   const { getToken, isSignedIn } = useAuth();
@@ -62,7 +63,10 @@ export default function OnboardingScreen() {
         await indriyaApi.ensureUser(getToken);
         
         // 2. Create the intention
-        await indriyaApi.createIntention(getToken, { content: intention });
+        await indriyaApi.createIntention(getToken, { 
+          content: intention,
+          struggle: struggle.trim() || undefined 
+        });
         console.log('Onboarding data saved to API.');
       }
 
@@ -79,61 +83,70 @@ export default function OnboardingScreen() {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
-      {/* Status Bar Space */}
-      <View style={styles.statusBar}>
-        <Text style={styles.timeText}>9:41</Text>
-        <View style={styles.statusIcons}>
-          <MaterialIcons name="signal-cellular-alt" size={18} color={Colors.textMuted} />
-          <MaterialIcons name="wifi" size={18} color={Colors.textMuted} />
-          <MaterialIcons name="battery-full" size={18} color={Colors.textMuted} />
+      <ScrollView 
+        style={styles.scrollView} 
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Header */}
+        <View style={styles.header}>
+          <Text style={styles.title}>
+            Begin with{'\n'}intention.
+          </Text>
+          <Text style={styles.subtitle}>
+            Indriya is a daily discipline practice rooted in Sanatana Dharma.
+          </Text>
         </View>
-      </View>
 
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.title}>
-          Begin with{'\n'}intention.
-        </Text>
-        <Text style={styles.subtitle}>
-          Indriya is a daily discipline practice rooted in Sanatana Dharma.
-        </Text>
-      </View>
-
-      {/* Intention Options */}
-      <View style={styles.intentionSection}>
-        {intentionOptions.map((option) => (
-          <TouchableOpacity
-            key={option.id}
-            style={styles.intentionOption}
-            onPress={() => setSelectedIntention(option.id)}
-            activeOpacity={0.8}
-          >
-            <View style={[
-              styles.intentionCard,
-              selectedIntention === option.id && styles.selectedCard
-            ]}>
-              <View style={styles.intentionContent}>
-                <Text style={[
-                  styles.intentionTitle,
-                  selectedIntention === option.id && styles.selectedTitle
-                ]}>
-                  {option.title}
-                </Text>
-                <Text style={[
-                  styles.intentionDescription,
-                  selectedIntention === option.id && styles.selectedDescription
-                ]}>
-                  {option.description}
-                </Text>
-              </View>
+        {/* Intention Options */}
+        <View style={styles.intentionSection}>
+          {intentionOptions.map((option) => (
+            <TouchableOpacity
+              key={option.id}
+              style={styles.intentionOption}
+              onPress={() => setSelectedIntention(option.id)}
+              activeOpacity={0.8}
+            >
               <View style={[
-                styles.radioIndicator,
-                selectedIntention === option.id && styles.selectedRadio
-              ]} />
-            </View>
-          </TouchableOpacity>
-        ))}
-      </View>
+                styles.intentionCard,
+                selectedIntention === option.id && styles.selectedCard
+              ]}>
+                <View style={styles.intentionContent}>
+                  <Text style={[
+                    styles.intentionTitle,
+                    selectedIntention === option.id && styles.selectedTitle
+                  ]}>
+                    {option.title}
+                  </Text>
+                  <Text style={[
+                    styles.intentionDescription,
+                    selectedIntention === option.id && styles.selectedDescription
+                  ]}>
+                    {option.description}
+                  </Text>
+                </View>
+                <View style={[
+                  styles.radioIndicator,
+                  selectedIntention === option.id && styles.selectedRadio
+                ]} />
+              </View>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {/* Struggle Input */}
+        <View style={styles.struggleSection}>
+          <Text style={styles.struggleTitle}>Current Struggle</Text>
+          <TextInput
+            style={styles.struggleInput}
+            placeholder="What is your biggest struggle right now?"
+            placeholderTextColor={Colors.textMuted}
+            value={struggle}
+            onChangeText={setStruggle}
+            multiline
+          />
+        </View>
+      </ScrollView>
 
       {/* Fixed Footer */}
       <View style={[styles.footer, { paddingBottom: insets.bottom + 16 }]}>
@@ -171,23 +184,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.borderLight,
   },
-  statusBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 32,
-    paddingTop: 16,
-    paddingBottom: 8,
+  scrollView: {
+    flex: 1,
   },
-  timeText: {
-    fontFamily: Typography.display.join(','),
-    fontSize: 12,
-    fontWeight: '600',
-    color: Colors.textLight,
-  },
-  statusIcons: {
-    flexDirection: 'row',
-    gap: 6,
+  scrollContent: {
+    paddingBottom: 24,
   },
   header: {
     paddingHorizontal: 24,
@@ -215,7 +216,7 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   intentionOption: {
-    cursor: 'pointer',
+    // Removed cursor: 'pointer' as it's web-only and can cause issues on native
   },
   intentionCard: {
     flexDirection: 'row',
@@ -265,6 +266,29 @@ const styles = StyleSheet.create({
   selectedRadio: {
     borderColor: Colors.primary,
     backgroundColor: Colors.primary,
+  },
+  struggleSection: {
+    paddingHorizontal: 24,
+    marginTop: 24,
+  },
+  struggleTitle: {
+    fontFamily: Typography.display.join(','),
+    fontSize: 18,
+    fontWeight: '600',
+    color: Colors.textLight,
+    marginBottom: 12,
+  },
+  struggleInput: {
+    backgroundColor: `${Colors.neutralDark}66`,
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
+    borderRadius: BorderRadius.xl,
+    padding: 16,
+    color: Colors.textLight,
+    fontFamily: Typography.display.join(','),
+    fontSize: 16,
+    minHeight: 100,
+    textAlignVertical: 'top',
   },
   footer: {
     paddingHorizontal: 24,
@@ -316,7 +340,6 @@ const styles = StyleSheet.create({
     width: 256,
     height: 256,
     backgroundColor: `${Colors.primary}33`, // 20% opacity
-    filter: 'blur(120px)',
   },
   bottomCircle: {
     bottom: 0,
@@ -324,6 +347,5 @@ const styles = StyleSheet.create({
     width: 256,
     height: 256,
     backgroundColor: `${Colors.primary}1A`, // 10% opacity
-    filter: 'blur(120px)',
   },
 });

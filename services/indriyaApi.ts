@@ -149,6 +149,10 @@ export const indriyaApi = {
     });
   },
 
+  async getPractices(getToken: GetToken) {
+    return authFetch<ApiPractice[]>(getToken, '/practice');
+  },
+
   async createDharmaLog(
     getToken: GetToken,
     input: { prompt: string; response: string }

@@ -7,12 +7,13 @@ import {
   ScrollView,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useIsFocused } from '@react-navigation/native';
 import { useAuth, useUser } from '@clerk/clerk-expo';
 import { MaterialIcons, Ionicons } from '@expo/vector-icons';
 import { Colors, Typography, Spacing, Shadow, BorderRadius } from '@/constants/theme';
 import Card from '@/components/Card';
 import ScreenWrapper from '@/components/ScreenWrapper';
-import { indriyaApi, ApiReflection } from '@/services/indriyaApi';
+import { indriyaApi, ApiReflection, ApiPractice } from '@/services/indriyaApi';
 
 const FALLBACK_WISDOM = {
   source: 'Bhagavad Gita 2.47',
@@ -28,27 +29,88 @@ const getTimeBasedGreeting = () => {
 
 export default function HomeScreen() {
   const router = useRouter();
+  const isFocused = useIsFocused();
   const { user } = useUser();
-  const { getToken } = useAuth();
+  const { getToken, isSignedIn } = useAuth();
   const [reflectionSnippet, setReflectionSnippet] = React.useState<string | null>(null);
   const [morningCompleted, setMorningCompleted] = React.useState(false);
+  const [streak, setStreak] = React.useState(0);
+  const [totalPractices, setTotalPractices] = React.useState(0);
 
   React.useEffect(() => {
-    const loadReflection = async () => {
+    if (!isSignedIn || !isFocused) return;
+
+    const loadDashboardData = async () => {
       try {
-        const reflections = await indriyaApi.getReflections(getToken);
+        const [reflections, practices] = await Promise.all([
+          indriyaApi.getReflections(getToken).catch(() => []),
+          indriyaApi.getPractices(getToken).catch(() => []),
+        ]);
+
         if (reflections && reflections.length > 0) {
-          // Get the most recent reflection
           const latest = reflections[0];
           setReflectionSnippet(latest.content.slice(0, 100));
         }
+
+        if (practices && practices.length > 0) {
+          // Calculate streak
+          const completedPractices = practices.filter(p => p.completed)
+            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+          
+          setTotalPractices(completedPractices.length);
+
+          if (completedPractices.length > 0) {
+            let currentStreak = 0;
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            let lastDate = today;
+            
+            // Check if today is completed
+            const firstPracticeDate = new Date(completedPractices[0].date);
+            firstPracticeDate.setHours(0, 0, 0, 0);
+            
+            if (firstPracticeDate.getTime() === today.getTime()) {
+              setMorningCompleted(true);
+            } else {
+              setMorningCompleted(false);
+              // If last practice was not today or yesterday, streak is 0
+              const yesterday = new Date(today);
+              yesterday.setDate(yesterday.getDate() - 1);
+              if (firstPracticeDate.getTime() !== yesterday.getTime()) {
+                setStreak(0);
+                return;
+              }
+              lastDate = yesterday;
+            }
+
+            // Count consecutive days
+            currentStreak = 1;
+            for (let i = 1; i < completedPractices.length; i++) {
+              const pDate = new Date(completedPractices[i].date);
+              pDate.setHours(0,0,0,0);
+              
+              const expectedDate = new Date(lastDate);
+              expectedDate.setDate(expectedDate.getDate() - 1);
+
+              if (pDate.getTime() === expectedDate.getTime()) {
+                currentStreak++;
+                lastDate = expectedDate;
+              } else if (pDate.getTime() < expectedDate.getTime()) {
+                break; // Gap in streak
+              }
+              // If multiple practices on same day, ignore and continue
+            }
+            setStreak(currentStreak);
+          }
+        }
       } catch (error) {
-        console.error('Failed to load reflections for dashboard:', error);
+        console.error('Failed to load dashboard data:', error);
       }
     };
 
-    loadReflection();
-  }, [getToken]);
+    loadDashboardData();
+  }, [getToken, isSignedIn, isFocused]);
 
   const userDisplayName = user?.firstName || user?.username || 'Seeker';
 
@@ -72,6 +134,20 @@ export default function HomeScreen() {
         </View>
 
         <View style={styles.content}>
+          {/* Dashboard Stats */}
+          <View style={styles.statsContainer}>
+            <View style={styles.statBox}>
+              <MaterialIcons name="local-fire-department" size={24} color={Colors.primary} />
+              <Text style={styles.statValue}>{streak}</Text>
+              <Text style={styles.statLabel}>Day Streak</Text>
+            </View>
+            <View style={styles.statDivider} />
+            <View style={styles.statBox}>
+              <MaterialIcons name="self-improvement" size={24} color={Colors.primary} />
+              <Text style={styles.statValue}>{totalPractices}</Text>
+              <Text style={styles.statLabel}>Total Rituals</Text>
+            </View>
+          </View>
           <Card
             title="Today's Wisdom"
             onPress={() => router.push('/wisdom')}
@@ -171,6 +247,39 @@ const styles = StyleSheet.create({
   },
   profileIcon: {
     padding: 4,
+  },
+  statsContainer: {
+    flexDirection: 'row',
+    backgroundColor: `${Colors.neutralDark}66`,
+    borderRadius: BorderRadius.xl,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
+    marginBottom: 8,
+  },
+  statBox: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  statDivider: {
+    width: 1,
+    backgroundColor: Colors.borderLight,
+    marginHorizontal: 16,
+  },
+  statValue: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: Colors.textLight,
+    fontFamily: Typography.display.join(','),
+    marginTop: 4,
+  },
+  statLabel: {
+    fontSize: 12,
+    color: Colors.textMuted,
+    marginTop: 2,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
   },
   content: {
     gap: 16,
