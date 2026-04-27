@@ -38,25 +38,43 @@ const intentionOptions: IntentionOption[] = [
 
 export default function OnboardingScreen() {
   const [selectedIntention, setSelectedIntention] = useState('discipline');
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const insets = useSafeAreaInsets();
   const { getToken, isSignedIn } = useAuth();
 
   const handleBeginPractice = async () => {
-    const selected = intentionOptions.find((option) => option.id === selectedIntention);
-    const intention = selected?.intention ?? intentionOptions[0].intention;
+    if (isSubmitting) return;
+    
+    setIsSubmitting(true);
+    try {
+      const selected = intentionOptions.find((option) => option.id === selectedIntention);
+      const intention = selected?.intention ?? intentionOptions[0].intention;
 
-    await UserStorage.saveUserData({
-      intention,
-      onboarded: true,
-    });
-
-    if (isSignedIn) {
-      await indriyaApi.createIntention(getToken, { content: intention }).catch((error) => {
-        console.error('Failed to save intention to API:', error);
+      // Save locally first for immediate responsiveness
+      await UserStorage.saveUserData({
+        intention,
+        onboarded: true,
       });
-    }
 
-    router.replace('/(tabs)');
+      if (isSignedIn) {
+        console.log('Syncing user and saving intention...');
+        // 1. Ensure user exists in backend
+        await indriyaApi.ensureUser(getToken);
+        
+        // 2. Create the intention
+        await indriyaApi.createIntention(getToken, { content: intention });
+        console.log('Onboarding data saved to API.');
+      }
+
+      router.replace('/(tabs)');
+    } catch (error) {
+      console.error('Onboarding failed:', error);
+      // Even if API fails, we allow them to proceed since we saved locally
+      // but we could also show an alert. For now, just navigate.
+      router.replace('/(tabs)');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -120,11 +138,14 @@ export default function OnboardingScreen() {
       {/* Fixed Footer */}
       <View style={[styles.footer, { paddingBottom: insets.bottom + 16 }]}>
         <TouchableOpacity
-          style={styles.beginButton}
+          style={[styles.beginButton, isSubmitting && { opacity: 0.7 }]}
           onPress={handleBeginPractice}
           activeOpacity={0.8}
+          disabled={isSubmitting}
         >
-          <Text style={styles.beginButtonText}>Begin Practice</Text>
+          <Text style={styles.beginButtonText}>
+            {isSubmitting ? 'Saving...' : 'Begin Practice'}
+          </Text>
         </TouchableOpacity>
         
         {/* iOS Home Indicator */}
